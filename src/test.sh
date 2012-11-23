@@ -1,8 +1,9 @@
 SOCKET=test.sock
+REPORT=gpiod.testreport
 NC="nc -U $SOCKET"
 
 rm -f $SOCKET
-./gpiod -d -s $SOCKET > /dev/null &
+./gpiod -d -s $SOCKET > $REPORT &
 GPIOD_PID=$!
 
 TESTCASE[0]="UNKNOWNCOMMAND"
@@ -61,13 +62,14 @@ EXPECTED[15]="ERROR - unknown port number"
 TESTCASE[16]="MODE a 0"
 EXPECTED[16]="ERROR - expected MODE <#pin> <IN|OUT>"
 TESTCASE[17]="MODE 10 o"
-EXPECTED[17]="ERROR - expected MODE <#pin> <IN|OUT>"
+EXPECTED[17]="ERROR - mode must be IN or OUT"
 TESTCASE[18]="MODE 10 IN"
 EXPECTED[18]="OK - operation performed"
 TESTCASE[19]="MODE 11 OUT"
 EXPECTED[19]="OK - operation performed"
 
-for((i=0; $i <= 19; i=$i + 1))
+failcount=0
+for((i=1; $i <= 19; i=$i + 1))
 do
     TESTCASE="${TESTCASE[$i]}"
     EXPECTED="${EXPECTED[$i]}"
@@ -76,21 +78,29 @@ do
 
     if ! kill -0 $GPIOD_PID > /dev/null 2> /dev/null
     then
-	 printf " FAIL\n\n"
-	 printf "Expected: $EXPECTED\n\n"
-	 printf "gpiod died!\nABORT!\n"
-	 exit
+	printf " FAIL\n\n"
+	printf "Expected: $EXPECTED\n\n"
+	printf "gpiod died!\nABORT!\n"
+	exit
     fi
 
     if [ "$ACTUAL" == "${EXPECTED[$i]}" ]
     then
-	 printf " PASS\n"
-     else
-	 printf " FAIL\n\n"
-	 printf "Actual: $ACTUAL\n"
-	 printf "Expected: $EXPECTED\n\n"
+	printf " PASS\n"
+    else
+	printf " FAIL\n\n"
+	printf "Actual:   $ACTUAL\n"
+	printf "Expected: $EXPECTED\n\n"
+	failcount=$(($failcount + 1))
     fi
 done
 
 kill $GPIOD_PID
+
+if [ $failcount -gt 0 ]
+then
+    printf "\nMore than one test failed\n"
+else
+    printf "\nAll tests passed\n"
+fi
 

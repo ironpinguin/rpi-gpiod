@@ -16,7 +16,7 @@ wiringpimock.o: wiringpimock.c
 	cc $(CFLAGS) -c -I../../wiringPi/wiringPi wiringpimock.c
 
 clean:
-	rm -f *~ gpiod.o wiringpimock.o gpiod
+	rm -f *~ gpiod.o wiringpimock.o gpiod gpiod.testreport
 
-test:
+test: gpiod
 	@./test.sh

@@ -121,11 +121,13 @@ int is_valid_pin_value(int value) {
     return (value == 0) || (value == 1);
 }
 
+int is_valid_pin_mode(char *mode_str) {
+    return ((strncmp(mode_str, "IN", 2) == 0) || (strncmp(mode_str, "OUT", 3) == 0));
+}
 
 void do_read_from_pin(int client_socket_fd, char *buf) {
-    int n;
     int pin_num;
-    n = sscanf(buf, "%d", &pin_num);
+    int n = sscanf(buf, "%d", &pin_num);
     if (n != 1) {
 	write_error_msg_to_client(client_socket_fd, "parameter of type integer expected");
     } else if (!is_valid_pin_num(pin_num)) {
@@ -145,10 +147,8 @@ void do_read_from_pin(int client_socket_fd, char *buf) {
 }
 
 void do_write_to_pin(int client_socket_fd, char *buf) {
-    int n;
     int pin_num, value;
-
-    n = sscanf(buf, "%d %d", &pin_num, &value);
+    int n = sscanf(buf, "%d %d", &pin_num, &value);
     if (n != 2) {
 	write_error_msg_to_client(client_socket_fd, "expected WRITE <#pin> <0|1>");
     } else if (!is_valid_pin_num(pin_num)) {
@@ -164,19 +164,33 @@ void do_write_to_pin(int client_socket_fd, char *buf) {
     }
 }
 
+void do_set_pin_mode(int client_socket_fd, char *buf) {
+    char mode_str[BUFFER_SIZE];
+    int pin_num, mode;
+    int n = sscanf(buf, "%d %s", &pin_num, mode_str);
+    if (n != 2) {
+	write_error_msg_to_client(client_socket_fd, "expected MODE <#pin> <IN|OUT>");
+    } else if (!is_valid_pin_num(pin_num)) {
+	write_error_msg_to_client(client_socket_fd, "unknown port number");
+    } else if (!is_valid_pin_mode(mode_str)) {
+	write_error_msg_to_client(client_socket_fd, "mode must be IN or OUT");
+    } else {
+	int mode = strcmp(mode_str, "IN")==0?0:1;
+	if (flag_verbose) {
+	    printf("EXECUTING %s PIN %d DIR = %s (%d)\n", CLIENT_MODE, pin_num, mode_str, mode);
+	}
+	pinMode(pin_num, mode);
+	write_msg_to_client(client_socket_fd, "operation performed");
+    }
+}
+
 int read_client(int socketfd) {
     struct sockaddr_un address;
     socklen_t address_len = sizeof(address);
     int client_socket_fd;
     int n;
     char buf[BUFFER_SIZE];
-    char client_cmd;
-    char *p;
-    int pin_num; /* 0..7 */
-    int value;   /* 0..1 */
-    char *dir;   /* IN / OUT */
-    char msg[BUFFER_SIZE];
-    size_t len;
+    bzero(buf, BUFFER_SIZE);
 
     if ((client_socket_fd = accept(socketfd,(struct sockaddr *)&address,&address_len)) < 0) {
 	perror("accept");
@@ -194,18 +208,9 @@ int read_client(int socketfd) {
     } else if (strncmp(buf, CLIENT_WRITE, strlen(CLIENT_WRITE)) == 0) {
 	do_write_to_pin(client_socket_fd, buf + strlen(CLIENT_WRITE) + 1);
     } else if (strncmp(buf, CLIENT_MODE, 4) == 0) {
-	p = buf + 5;
-	sscanf(p, "%d %s", &pin_num, dir);
-	printf("EXECUTING %s PIN %d DIR = %s\n", CLIENT_MODE, pin_num, dir);
-
-	pinMode(pin_num, strcmp(dir, "IN")==0?0:1);
-	snprintf(msg, BUFFER_SIZE, "%s\n", SERVER_OK);
-	len = strlen(msg);
-	write(client_socket_fd, msg, len);
+	do_set_pin_mode(client_socket_fd, buf + strlen(CLIENT_MODE) + 1);
     } else {
-	snprintf(msg, BUFFER_SIZE, "%s - %s\n", SERVER_ERROR, "unkown command");
-	len = strlen(msg);
-	write(client_socket_fd, msg, len);
+	write_error_msg_to_client(client_socket_fd,  "unkown command");
     }
     close(client_socket_fd);
 }
