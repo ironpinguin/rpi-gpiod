@@ -1,11 +1,28 @@
-/* #include "wiringPi.h" */
+#include "wiringPi.h" 
 
-int digitalRead(int pin) {
-    return 1;
+void (*pinMode)     (int pin, int mode);
+int  (*digitalRead) (int pin);
+void (*digitalWrite)(int pin, int value);
+
+int digitalReadWMock(int pin) {
+    return (pin % 2);
 }
 
-void digitalWrite(int pin, int value) {
+void digitalWriteWMock(int pin, int value) {
 }
 
-void pinMode(int pin, int mode) {
+void pinModeWMock(int pin, int mode) {
 }
+
+int wiringPiSetupGpio () {
+    pinMode      = pinModeWMock;
+    digitalRead  = digitalReadWMock;
+    digitalWrite = digitalWriteWMock;
+}
+
+int wpiPinToGpio (int wpiPin)
+{
+      return wpiPin & 63;
+}
+
+
