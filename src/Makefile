@@ -1,5 +1,6 @@
+CFLAGS = -g
 # uncomment on host
-# MOCK_FILE = wiringpimock.o
+MOCK_FILE = wiringpimock.o
 
 # uncomment on Rasperry
 # EXTRA_CFLAGS = -DNO_SIG_HANDLER
@@ -9,11 +10,13 @@ gpiod: gpiod.o $(MOCK_FILE)
 	cc -o gpiod gpiod.o $(LD_FLAGS) $(MOCK_FILE)
 
 gpiod.o: gpiod.c
-	cc -c -I../../wiringPi/wiringPi $(EXTRA_CFLAGS)  gpiod.c
+	cc $(CFLAGS) -c -I../../wiringPi/wiringPi $(EXTRA_CFLAGS)  gpiod.c
 
 wiringpimock.o: wiringpimock.c
-	cc -c -I../../wiringPi/wiringPi wiringpimock.c
+	cc $(CFLAGS) -c -I../../wiringPi/wiringPi wiringpimock.c
 
 clean:
-	rm -f *~ gpiod.o wiringpimock.o
+	rm -f *~ gpiod.o wiringpimock.o gpiod
 
+test:
+	@./test.sh
