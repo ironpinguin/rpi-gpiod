@@ -12,6 +12,7 @@
 #include <fcntl.h>
 #include <string.h>
 
+#include "gpiod.h"
 #include "wiringPi.h"
 
 #define PID_FILE "/var/run/gpiod.pid"
@@ -52,8 +53,11 @@ void delete_socket_file() {
 }
 
 void cleanup_and_exit() {
-  delete_pid_file();
-  delete_socket_file();
+    if (!flag_dont_detach) {
+	delete_pid_file();
+    }
+    delete_socket_file();
+    exit(EXIT_SUCCESS);
 }
 
 void write_pid_file() {
@@ -65,6 +69,30 @@ void write_pid_file() {
     fprintf(pid_file, "%d\n", getpid());
     fclose(pid_file);
 }
+
+int write_error_msg_to_client(int fd, char *msg) {
+    char buf[BUFFER_SIZE];
+    size_t len;
+    snprintf(buf, BUFFER_SIZE, "%s - %s\n", SERVER_ERROR, msg);
+    len = strlen(buf);
+    write(fd, buf, len);
+}
+
+int write_all_data_to_client(int fd) {
+    int pin;
+    char msg[BUFFER_SIZE];
+    size_t len;
+
+    snprintf(msg, BUFFER_SIZE, "%s\n", SERVER_OK);
+    len = strlen(msg);
+    write(fd, msg, len);
+    for (pin = 0 ; pin < NUM_PINS ; ++pin) {
+	snprintf(msg, BUFFER_SIZE, "%d %3d %s %d\n", pin, wpiPinToGpio (pin), pinNames [pin], digitalRead (pin));
+	len = strlen(msg);
+	write(fd, msg, len);
+    }
+}
+
 
 int read_client(int socketfd) {
     struct sockaddr_un address;
@@ -91,44 +119,52 @@ int read_client(int socketfd) {
 
     if (strncmp(buf, CLIENT_READALL, 7) == 0) {
 	printf("EXECUTING %s\n", CLIENT_READALL);
-	// readall
+	write_all_data_to_client(client_socket_fd);
     } else if (strncmp(buf, CLIENT_READ, 4) == 0) {
 	int value;
-	p = buf + 4;
-	pin_num = atol(p);
-	printf("EXECUTING %s PIN %d\n", CLIENT_READ, pin_num);
-
-	value = digitalRead(pin_num);
-	if (flag_verbose) {
-	    printf("VALUE = %d\n", value);
-	}
-	snprintf(msg, BUFFER_SIZE, "%s - %d", SERVER_OK, value);
-	len = strlen(msg);
-	write(client_socket_fd, msg, len);
-    } else if (strncmp(buf, CLIENT_WRITE, 5) == 0) {
+	int n;
 	p = buf + 5;
+	n = sscanf(p, "%d", &pin_num);
+	if (n != 1) {
+	    write_error_msg_to_client(client_socket_fd, "parameter of type integer expected");
+	} else if ((pin_num < 0) || (pin_num > 16)) {
+	    write_error_msg_to_client(client_socket_fd, "unknown port number");
+	} else {
+	    if (flag_verbose) {
+		printf("EXECUTING %s PIN %d\n", CLIENT_READ, pin_num);
+	    }
+
+	    value = digitalRead(pin_num);
+	    if (flag_verbose) {
+		printf("VALUE = %d\n", value);
+	    }
+	    snprintf(msg, BUFFER_SIZE, "%s - %d\n", SERVER_OK, value);
+	    len = strlen(msg);
+	    write(client_socket_fd, msg, len);
+	}
+    } else if (strncmp(buf, CLIENT_WRITE, 5) == 0) {
+	p = buf + 6;
 	sscanf(p, "%d %d", &pin_num, &value);
 	printf("EXECUTING %s PIN %d VALUE = %d\n", CLIENT_WRITE, pin_num, value);
 
 	digitalWrite(pin_num, value);
-	snprintf(msg, BUFFER_SIZE, "%s", SERVER_OK);
+	snprintf(msg, BUFFER_SIZE, "%s\n", SERVER_OK);
 	len = strlen(msg);
 	write(client_socket_fd, msg, len);
     } else if (strncmp(buf, CLIENT_MODE, 4) == 0) {
-	p = buf + 4;
+	p = buf + 5;
 	sscanf(p, "%d %s", &pin_num, dir);
 	printf("EXECUTING %s PIN %d DIR = %s\n", CLIENT_MODE, pin_num, dir);
 
 	pinMode(pin_num, strcmp(dir, "IN")==0?0:1);
-	snprintf(msg, BUFFER_SIZE, "%s", SERVER_OK);
+	snprintf(msg, BUFFER_SIZE, "%s\n", SERVER_OK);
 	len = strlen(msg);
 	write(client_socket_fd, msg, len);
     } else {
-	snprintf(msg, BUFFER_SIZE, "%s - %s", SERVER_ERROR, "unkown protocol command");
+	snprintf(msg, BUFFER_SIZE, "%s - %s\n", SERVER_ERROR, "unkown command");
 	len = strlen(msg);
 	write(client_socket_fd, msg, len);
     }
-
     close(client_socket_fd);
 }
 
@@ -176,21 +212,23 @@ int main(int argc, char **argv) {
 	}
 
 	write_pid_file();
-#ifndef NO_SIG_HANDLER
-	sig_act.sa_handler = cleanup_and_exit;
-#endif
-    } else {
-#ifndef NO_SIG_HANDLER
-	sig_act.sa_handler = delete_socket_file;
-#endif
     } 
 
 #ifndef NO_SIG_HANDLER
+    sig_act.sa_handler = cleanup_and_exit;
     sigemptyset (&sig_act.sa_mask);
-    if (sigaction(15, &sig_act, &sig_oact) == -1) {
-    	perror("sigaction");
+    if (sigaction(SIGTERM, &sig_act, &sig_oact) == -1) {
+        perror("sigaction");
         exit (EXIT_FAILURE);
-    }	
+    }
+    if (sigaction(SIGSEGV, &sig_act, &sig_oact) == -1) {
+        perror("sigaction");
+        exit (EXIT_FAILURE);
+    }
+    if (sigaction(SIGINT, &sig_act, &sig_oact) == -1) {
+        perror("sigaction");
+        exit (EXIT_FAILURE);
+    }
 #endif
 
     if ((socketfd = socket(AF_UNIX,SOCK_STREAM,0)) < 0) {
@@ -214,6 +252,10 @@ int main(int argc, char **argv) {
         exit (EXIT_FAILURE);
     }
 
+    if (wiringPiSetupGpio() == -1) {
+	printf ("Unable to initialise GPIO mode.\n");
+        exit (EXIT_FAILURE);
+    }
     while(read_client(socketfd)) {
     }
 }
