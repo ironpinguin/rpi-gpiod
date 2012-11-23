@@ -175,16 +175,22 @@ int main(int argc, char **argv) {
 	}
 
 	write_pid_file();
+#ifndef NO_SIG_HANDLER
 	sig_act.sa_handler = cleanup_and_exit;
+#endif
     } else {
+#ifndef NO_SIG_HANDLER
 	sig_act.sa_handler = delete_socket_file;
+#endif
     } 
 
+#ifndef NO_SIG_HANDLER
     sigemptyset (&sig_act.sa_mask);
     if (sigaction(15, &sig_act, &sig_oact) == -1) {
     	perror("sigaction");
         exit (EXIT_FAILURE);
     }	
+#endif
 
     if ((socketfd = socket(AF_UNIX,SOCK_STREAM,0)) < 0) {
     	perror("creating socket");
