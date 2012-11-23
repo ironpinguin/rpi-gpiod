@@ -290,7 +290,12 @@ int main(int argc, char **argv) {
 
     printf("Binding to socket file: %s\n", socket_filename);
     if (bind(socketfd, (struct sockaddr *)&address, address_len) < 0) {
-    	perror("binding socket");
+        perror("binding socket");
+        exit (EXIT_FAILURE);
+    }
+
+    if (chmod(socket_filename, S_IRWXU | S_IRWXG | S_IRWXO) == -1) {
+        perror("socket_file");
         exit (EXIT_FAILURE);
     }
 

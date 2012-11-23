@@ -69,7 +69,7 @@ TESTCASE[19]="MODE 11 OUT"
 EXPECTED[19]="OK - operation performed"
 
 failcount=0
-for((i=1; $i <= 19; i=$i + 1))
+for((i=0; $i <= 19; i=$i + 1))
 do
     TESTCASE="${TESTCASE[$i]}"
     EXPECTED="${EXPECTED[$i]}"
@@ -84,7 +84,7 @@ do
 	exit
     fi
 
-    if [ "$ACTUAL" == "${EXPECTED[$i]}" ]
+    if [ "$ACTUAL" == "$EXPECTED" ]
     then
 	printf " PASS\n"
     else
@@ -94,6 +94,21 @@ do
 	failcount=$(($failcount + 1))
     fi
 done
+
+TESTCASE="Socket permissions"
+printf "Test Case %4d :  %-30s " "$i" "$TESTCASE"
+ACTUAL=$(ls -l $SOCKET | awk '{ print $1 }')
+EXPECTED='srwxrwxrwx'
+if [ "$ACTUAL" == "$EXPECTED" ]
+then
+    printf " PASS\n"
+else
+    printf " FAIL\n\n"
+    printf "Actual:   $ACTUAL\n"
+    printf "Expected: $EXPECTED\n\n"
+    failcount=$(($failcount + 1))
+fi
+
 
 kill $GPIOD_PID
 
