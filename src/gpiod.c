@@ -78,11 +78,31 @@ int write_error_msg_to_client(int fd, char *msg) {
     write(fd, buf, len);
 }
 
+int write_int_value_to_client(int fd, int value) {
+    char buf[BUFFER_SIZE];
+    size_t len;
+    snprintf(buf, BUFFER_SIZE, "%s - %d\n", SERVER_OK, value);
+    len = strlen(buf);
+    write(fd, buf, len);
+}
+
+int write_msg_to_client(int fd, char *msg) {
+    char buf[BUFFER_SIZE];
+    size_t len;
+    snprintf(buf, BUFFER_SIZE, "%s - %s\n", SERVER_OK, msg);
+    len = strlen(buf);
+    write(fd, buf, len);
+}
+
+
 int write_all_data_to_client(int fd) {
     int pin;
     char msg[BUFFER_SIZE];
     size_t len;
 
+    if (flag_verbose) {
+	printf("EXECUTING %s\n", CLIENT_READALL);
+    }	
     snprintf(msg, BUFFER_SIZE, "%s\n", SERVER_OK);
     len = strlen(msg);
     write(fd, msg, len);
@@ -93,6 +113,56 @@ int write_all_data_to_client(int fd) {
     }
 }
 
+int is_valid_pin_num(int pin_num) {
+    return (pin_num >= 0) && (pin_num < 16);
+}
+
+int is_valid_pin_value(int value) {
+    return (value == 0) || (value == 1);
+}
+
+
+void do_read_from_pin(int client_socket_fd, char *buf) {
+    int n;
+    int pin_num;
+    n = sscanf(buf, "%d", &pin_num);
+    if (n != 1) {
+	write_error_msg_to_client(client_socket_fd, "parameter of type integer expected");
+    } else if (!is_valid_pin_num(pin_num)) {
+	write_error_msg_to_client(client_socket_fd, "unknown port number");
+    } else {
+	int value;
+	if (flag_verbose) {
+	    printf("EXECUTING %s PIN %d\n", CLIENT_READ, pin_num);
+	}
+
+	value = digitalRead(pin_num);
+	if (flag_verbose) {
+	printf("VALUE = %d\n", value);
+	}
+	write_int_value_to_client(client_socket_fd, value);
+    }
+}
+
+void do_write_to_pin(int client_socket_fd, char *buf) {
+    int n;
+    int pin_num, value;
+
+    n = sscanf(buf, "%d %d", &pin_num, &value);
+    if (n != 2) {
+	write_error_msg_to_client(client_socket_fd, "expected WRITE <#pin> <0|1>");
+    } else if (!is_valid_pin_num(pin_num)) {
+	write_error_msg_to_client(client_socket_fd, "unknown port number");
+    } else if (!is_valid_pin_value(value)) {
+	write_error_msg_to_client(client_socket_fd, "value must be 0 or 1");
+    } else {
+	if (flag_verbose) {
+	    printf("EXECUTING %s PIN %d VALUE = %d\n", CLIENT_WRITE, pin_num, value);
+	}
+	digitalWrite(pin_num, value);
+	write_msg_to_client(client_socket_fd, "operation performed");
+    }
+}
 
 int read_client(int socketfd) {
     struct sockaddr_un address;
@@ -118,39 +188,11 @@ int read_client(int socketfd) {
     printf("client send: %s\n", buf);
 
     if (strncmp(buf, CLIENT_READALL, 7) == 0) {
-	printf("EXECUTING %s\n", CLIENT_READALL);
 	write_all_data_to_client(client_socket_fd);
-    } else if (strncmp(buf, CLIENT_READ, 4) == 0) {
-	int value;
-	int n;
-	p = buf + 5;
-	n = sscanf(p, "%d", &pin_num);
-	if (n != 1) {
-	    write_error_msg_to_client(client_socket_fd, "parameter of type integer expected");
-	} else if ((pin_num < 0) || (pin_num > 16)) {
-	    write_error_msg_to_client(client_socket_fd, "unknown port number");
-	} else {
-	    if (flag_verbose) {
-		printf("EXECUTING %s PIN %d\n", CLIENT_READ, pin_num);
-	    }
-
-	    value = digitalRead(pin_num);
-	    if (flag_verbose) {
-		printf("VALUE = %d\n", value);
-	    }
-	    snprintf(msg, BUFFER_SIZE, "%s - %d\n", SERVER_OK, value);
-	    len = strlen(msg);
-	    write(client_socket_fd, msg, len);
-	}
-    } else if (strncmp(buf, CLIENT_WRITE, 5) == 0) {
-	p = buf + 6;
-	sscanf(p, "%d %d", &pin_num, &value);
-	printf("EXECUTING %s PIN %d VALUE = %d\n", CLIENT_WRITE, pin_num, value);
-
-	digitalWrite(pin_num, value);
-	snprintf(msg, BUFFER_SIZE, "%s\n", SERVER_OK);
-	len = strlen(msg);
-	write(client_socket_fd, msg, len);
+    } else if (strncmp(buf, CLIENT_READ, strlen(CLIENT_READ)) == 0) {
+	do_read_from_pin(client_socket_fd, buf + strlen(CLIENT_READ) + 1);
+    } else if (strncmp(buf, CLIENT_WRITE, strlen(CLIENT_WRITE)) == 0) {
+	do_write_to_pin(client_socket_fd, buf + strlen(CLIENT_WRITE) + 1);
     } else if (strncmp(buf, CLIENT_MODE, 4) == 0) {
 	p = buf + 5;
 	sscanf(p, "%d %s", &pin_num, dir);
