@@ -52,20 +52,43 @@ TESTCASE[11]="WRITE 11 1"
 EXPECTED[11]="OK - operation performed"
 TESTCASE[12]="WRITE 11 3"
 EXPECTED[12]="ERROR - value must be 0 or 1"
+TESTCASE[13]="MODE"
+EXPECTED[13]="ERROR - expected MODE <#pin> <IN|OUT>"
+TESTCASE[14]="MODE 1"
+EXPECTED[14]="ERROR - expected MODE <#pin> <IN|OUT>"
+TESTCASE[15]="MODE 999 0"
+EXPECTED[15]="ERROR - unknown port number"
+TESTCASE[16]="MODE a 0"
+EXPECTED[16]="ERROR - expected MODE <#pin> <IN|OUT>"
+TESTCASE[17]="MODE 10 o"
+EXPECTED[17]="ERROR - expected MODE <#pin> <IN|OUT>"
+TESTCASE[18]="MODE 10 IN"
+EXPECTED[18]="OK - operation performed"
+TESTCASE[19]="MODE 11 OUT"
+EXPECTED[19]="OK - operation performed"
 
-for((i=0; $i <= 12; i=$i + 1))
+for((i=0; $i <= 19; i=$i + 1))
 do
     TESTCASE="${TESTCASE[$i]}"
     EXPECTED="${EXPECTED[$i]}"
     printf "Test Case %4d :  %-30s " "$i" "$TESTCASE"
     ACTUAL=`echo "$TESTCASE" |$NC`
+
+    if ! kill -0 $GPIOD_PID > /dev/null 2> /dev/null
+    then
+	 printf " FAIL\n\n"
+	 printf "Expected: $EXPECTED\n\n"
+	 printf "gpiod died!\nABORT!\n"
+	 exit
+    fi
+
     if [ "$ACTUAL" == "${EXPECTED[$i]}" ]
     then
 	 printf " PASS\n"
      else
 	 printf " FAIL\n\n"
 	 printf "Actual: $ACTUAL\n"
-	 printf "Expected: ${EXPECTED[$i]}\n\n"
+	 printf "Expected: $EXPECTED\n\n"
     fi
 done
 
