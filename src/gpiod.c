@@ -9,6 +9,7 @@
 #include <sys/types.h>
 #include <signal.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <sys/un.h>
 #include <fcntl.h>
 #include <string.h>
@@ -71,7 +72,7 @@ void write_pid_file() {
     fclose(pid_file);
 }
 
-int write_error_msg_to_client(int fd, char *msg) {
+void write_error_msg_to_client(int fd, char *msg) {
     char buf[BUFFER_SIZE];
     size_t len;
     snprintf(buf, BUFFER_SIZE, "%s - %s\n", SERVER_ERROR, msg);
@@ -79,7 +80,7 @@ int write_error_msg_to_client(int fd, char *msg) {
     write(fd, buf, len);
 }
 
-int write_int_value_to_client(int fd, int value) {
+void write_int_value_to_client(int fd, int value) {
     char buf[BUFFER_SIZE];
     size_t len;
     snprintf(buf, BUFFER_SIZE, "%s - %d\n", SERVER_OK, value);
@@ -87,7 +88,7 @@ int write_int_value_to_client(int fd, int value) {
     write(fd, buf, len);
 }
 
-int write_msg_to_client(int fd, char *msg) {
+void write_msg_to_client(int fd, char *msg) {
     char buf[BUFFER_SIZE];
     size_t len;
     snprintf(buf, BUFFER_SIZE, "%s - %s\n", SERVER_OK, msg);
@@ -95,8 +96,7 @@ int write_msg_to_client(int fd, char *msg) {
     write(fd, buf, len);
 }
 
-
-int write_all_data_to_client(int fd) {
+void write_all_data_to_client(int fd) {
     int pin;
     char msg[BUFFER_SIZE];
     size_t len;
@@ -167,7 +167,7 @@ void do_write_to_pin(int client_socket_fd, char *buf) {
 
 void do_set_pin_mode(int client_socket_fd, char *buf) {
     char mode_str[BUFFER_SIZE];
-    int pin_num, mode;
+    int pin_num;
     int n = sscanf(buf, "%d %s", &pin_num, mode_str);
     if (n != 2) {
 	write_error_msg_to_client(client_socket_fd, "expected MODE <#pin> <IN|OUT>");
@@ -313,4 +313,6 @@ int main(int argc, char **argv) {
     }
     while(read_client(socketfd)) {
     }
+
+    return 0;
 }

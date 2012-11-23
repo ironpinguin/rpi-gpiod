@@ -18,6 +18,8 @@ int wiringPiSetupGpio () {
     pinMode      = pinModeWMock;
     digitalRead  = digitalReadWMock;
     digitalWrite = digitalWriteWMock;
+
+    return 1;
 }
 
 int wpiPinToGpio (int wpiPin)
