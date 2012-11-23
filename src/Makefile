@@ -10,7 +10,7 @@ MOCK_BIN  = gpiod_mock
 MOCK_OBJ  = wiringpimock.o
 
 LD_FLAGS  = $(LIB_DIR) $(LIBS)
-CFLAGS    = -g $(INC_DIR)
+CFLAGS    = -Wall -g $(INC_DIR)
 
 SRC       = gpiod.c
 OBJ       = $(SRC:.c=.o)
