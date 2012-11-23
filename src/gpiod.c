@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <sys/types.h>
+#include <signal.h>
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <fcntl.h>
@@ -213,6 +214,8 @@ int read_client(int socketfd) {
 	write_error_msg_to_client(client_socket_fd,  "unkown command");
     }
     close(client_socket_fd);
+
+    return 1;
 }
 
 int main(int argc, char **argv) {
