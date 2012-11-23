@@ -12,6 +12,8 @@
 #include <fcntl.h>
 #include <string.h>
 
+#include "wiringPi.h"
+
 #define PID_FILE "/var/run/gpiod.pid"
 #define BUFFER_SIZE 64
 
@@ -24,6 +26,8 @@
 #define SERVER_ERROR "ERROR"
 
 char *socket_filename;
+int flag_verbose     = 0;
+int flag_dont_detach = 0;
 
 void usage() {
     printf("Usage: gpio [ -d ] [ -v ] [ -s socketfile ] [ -h ]\n");
@@ -73,6 +77,8 @@ int read_client(int socketfd) {
     int pin_num; /* 0..7 */
     int value;   /* 0..1 */
     char *dir;   /* IN / OUT */
+    char msg[BUFFER_SIZE];
+    size_t len;
 
     if ((client_socket_fd = accept(socketfd,(struct sockaddr *)&address,&address_len)) < 0) {
 	perror("accept");
@@ -84,23 +90,40 @@ int read_client(int socketfd) {
     printf("client send: %s\n", buf);
 
     if (strncmp(buf, CLIENT_READALL, 7) == 0) {
-	// readall
 	printf("EXECUTING %s\n", CLIENT_READALL);
+	// readall
     } else if (strncmp(buf, CLIENT_READ, 4) == 0) {
+	int value;
 	p = buf + 4;
 	pin_num = atol(p);
 	printf("EXECUTING %s PIN %d\n", CLIENT_READ, pin_num);
+
+	value = digitalRead(pin_num);
+	if (flag_verbose) {
+	    printf("VALUE = %d\n", value);
+	}
+	snprintf(msg, BUFFER_SIZE, "%s - %d", SERVER_OK, value);
+	len = strlen(msg);
+	write(client_socket_fd, msg, len);
     } else if (strncmp(buf, CLIENT_WRITE, 5) == 0) {
 	p = buf + 5;
 	sscanf(p, "%d %d", &pin_num, &value);
 	printf("EXECUTING %s PIN %d VALUE = %d\n", CLIENT_WRITE, pin_num, value);
+
+	digitalWrite(pin_num, value);
+	snprintf(msg, BUFFER_SIZE, "%s", SERVER_OK);
+	len = strlen(msg);
+	write(client_socket_fd, msg, len);
     } else if (strncmp(buf, CLIENT_MODE, 4) == 0) {
 	p = buf + 4;
 	sscanf(p, "%d %s", &pin_num, dir);
 	printf("EXECUTING %s PIN %d DIR = %s\n", CLIENT_MODE, pin_num, dir);
+
+	pinMode(pin_num, strcmp(dir, "IN")==0?0:1);
+	snprintf(msg, BUFFER_SIZE, "%s", SERVER_OK);
+	len = strlen(msg);
+	write(client_socket_fd, msg, len);
     } else {
-	char msg[BUFFER_SIZE];
-	size_t len;
 	snprintf(msg, BUFFER_SIZE, "%s - %s", SERVER_ERROR, "unkown protocol command");
 	len = strlen(msg);
 	write(client_socket_fd, msg, len);
@@ -110,8 +133,6 @@ int read_client(int socketfd) {
 }
 
 int main(int argc, char **argv) {
-    int flag_dont_detach = 0;
-    int flag_verbose     = 0;
     int ch;
     pid_t pid;
     int socketfd;
