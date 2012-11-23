@@ -1,22 +1,31 @@
-CFLAGS = -g
-# uncomment on host
-MOCK_FILE = wiringpimock.o
-
 # uncomment on Rasperry
 # EXTRA_CFLAGS = -DNO_SIG_HANDLER
-# LD_FLAGS     = -L../../wiringPi -lwiringPi
+#
+INC_DIR   = -I../../wiringPi/wiringPi
+LIB_DIR   = -L../../wiringPi
 
-gpiod: gpiod.o $(MOCK_FILE)
-	cc -o gpiod gpiod.o $(LD_FLAGS) $(MOCK_FILE)
+LIBS      = -lwiringPi
 
-gpiod.o: gpiod.c
-	cc $(CFLAGS) -c -I../../wiringPi/wiringPi $(EXTRA_CFLAGS)  gpiod.c
+MOCK_BIN  = gpiod_mock
+MOCK_OBJ  = wiringpimock.o
 
-wiringpimock.o: wiringpimock.c
-	cc $(CFLAGS) -c -I../../wiringPi/wiringPi wiringpimock.c
+LD_FLAGS  = $(LIB_DIR) $(LIBS)
+CFLAGS    = -g $(INC_DIR)
+
+SRC       = gpiod.c
+OBJ       = $(SRC:.c=.o)
+
+gpiod: $(OBJ)
+	cc -o $@ gpiod.o $(LD_FLAGS)
+
+gpiod_mock: $(OBJ) $(MOCK_OBJ)
+	cc -o $@  gpiod.o $(MOCK_OBJ)
+
+.c.o:
+	cc $(CFLAGS) $(EXTRA_CFLAGS) -c $< 
 
 clean:
-	rm -f *~ gpiod.o wiringpimock.o gpiod gpiod.testreport
+	rm -f *~ gpiod gpiod.testreport $(MOCK_BIN) $(MOCK_OBJ) $(OBJ)
 
-test: gpiod
+test: $(MOCK_BIN)
 	@./test.sh

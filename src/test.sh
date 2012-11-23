@@ -1,9 +1,13 @@
+#!/bin/bash
+
+GPIOD=gpiod_mock
 SOCKET=test.sock
 REPORT=gpiod.testreport
 NC="nc -U $SOCKET"
 
 rm -f $SOCKET
-./gpiod -d -s $SOCKET > $REPORT &
+
+./$GPIOD -d -s $SOCKET > $REPORT &
 GPIOD_PID=$!
 
 TESTCASE[0]="UNKNOWNCOMMAND"
