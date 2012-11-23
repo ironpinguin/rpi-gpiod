@@ -6,6 +6,11 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <fcntl.h>
+
+#define PID_FILE "/var/run/gpiod.pid"
 
 void usage() {
     printf("Usage: gpio [ -d ] [ -v ] [ -s socketfile ] [ -h ]\n");
@@ -20,6 +25,8 @@ int main(int argc, char **argv) {
     int flag_verbose     = 0;
     char *socket_filename;
     int ch;
+    pid_t pid;
+    FILE *pid_file;
 
     while ((ch = getopt(argc, argv, "dhvs:")) != -1) {
 	 switch (ch) {
@@ -28,7 +35,7 @@ int main(int argc, char **argv) {
 	     	 break;
 	     case 'h':
 		 usage();
-	     	 exit(0);
+	     	 exit(EXIT_SUCCESS);
 		 break;
 	     case 'v':
 		 flag_verbose = 1;
@@ -39,7 +46,29 @@ int main(int argc, char **argv) {
 	     default:
 		 usage();
 	     	 exit(1);
-
 	 }
+    }
+
+    pid = fork();
+    if (pid < 0) {
+	exit(EXIT_FAILURE);
+    }
+    // terminate parent
+    if (pid > 0) {
+	exit(EXIT_SUCCESS);
+    }
+    if (setsid() < 0) {
+	exit (EXIT_FAILURE);
+    }
+
+    // write pid file
+    if ((pid_file = fopen(PID_FILE, "w+")) == NULL) {
+	perror(PID_FILE);
+	exit (EXIT_FAILURE);
+    }
+    fprintf(pid_file, "%d\n", getpid());
+    fclose(pid_file);
+
+    while(1) {
     }
 }
