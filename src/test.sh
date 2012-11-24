@@ -1,14 +1,31 @@
 #!/bin/bash
 
-GPIOD=gpiod_mock
-SOCKET=test.sock
+GPIOD=gpiod
+SOCKET=/tmp/gpiod-test.sock
 REPORT=gpiod.testreport
 NC="nc -U $SOCKET"
+PRELOAD_LIB=
 
 rm -f $SOCKET
 
-./$GPIOD -d -s $SOCKET > $REPORT &
+if [ $# -ge 1 ]
+then
+    if [ "$1" == "--with-mock-bin" ]
+    then
+	GPIOD=gpiod_mock
+    fi
+    if [ "$1" == "--with-mock-lib" ]
+    then
+	PRELOAD_LIB=$PWD/libwiringPi_mock.so
+    fi
+fi
+
+echo "executing LD_PRELOAD=$PRELOAD_LIB ./$GPIOD -d -s $SOCKET > $REPORT &"
+
+LD_PRELOAD=$PRELOAD_LIB ./$GPIOD -d -s $SOCKET > $REPORT &
 GPIOD_PID=$!
+
+sleep 1
 
 TESTCASE[0]="UNKNOWNCOMMAND"
 EXPECTED[0]="ERROR - unkown command"
