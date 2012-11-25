@@ -200,7 +200,9 @@ int read_client(int socketfd) {
     if (n == -1) {
 	perror("read");
     }
-    printf("client send: %s\n", buf);
+    if (flag_verbose) {
+        printf("client send: %s\n", buf);
+    }
 
     if (strncmp(buf, CLIENT_READALL, 7) == 0) {
 	write_all_data_to_client(client_socket_fd);
@@ -287,7 +289,9 @@ int main(int argc, char **argv) {
     strcpy(address.sun_path, socket_filename);
     address_len = strlen(address.sun_path) + sizeof(address.sun_family) + 1;
 
-    printf("Binding to socket file: %s\n", socket_filename);
+    if (flag_verbose) {
+        printf("Binding to socket file: %s\n", socket_filename);
+    }
     if (bind(socketfd, (struct sockaddr *)&address, address_len) < 0) {
         perror("binding socket");
         exit (EXIT_FAILURE);
