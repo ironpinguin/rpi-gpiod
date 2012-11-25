@@ -224,9 +224,7 @@ int main(int argc, char **argv) {
     int socketfd;
     struct sockaddr_un address;
     socklen_t address_len;
-#ifndef NO_SIG_HANDLER
     struct sigaction sig_act, sig_oact;
-#endif
     while ((ch = getopt(argc, argv, "dhvs:")) != -1) {
 	 switch (ch) {
 	     case 'd':
@@ -264,7 +262,6 @@ int main(int argc, char **argv) {
 	write_pid_file();
     } 
 
-#ifndef NO_SIG_HANDLER
     sig_act.sa_handler = cleanup_and_exit;
     sigemptyset (&sig_act.sa_mask);
     if (sigaction(SIGTERM, &sig_act, &sig_oact) == -1) {
@@ -279,7 +276,6 @@ int main(int argc, char **argv) {
         perror("sigaction");
         exit (EXIT_FAILURE);
     }
-#endif
 
     if ((socketfd = socket(AF_UNIX,SOCK_STREAM,0)) < 0) {
     	perror("creating socket");
