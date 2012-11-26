@@ -22,6 +22,14 @@ int wiringPiSetupGpio () {
     return 1;
 }
 
+int wiringPiSetup () {
+    pinMode      = pinModeWMock;
+    digitalRead  = digitalReadWMock;
+    digitalWrite = digitalWriteWMock;
+
+    return 1;
+}
+
 int wpiPinToGpio (int wpiPin)
 {
       return wpiPin & 63;
