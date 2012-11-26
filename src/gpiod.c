@@ -307,7 +307,7 @@ int main(int argc, char **argv) {
         exit (EXIT_FAILURE);
     }
 
-    if (wiringPiSetupGpio() == -1) {
+    if (wiringPiSetup() == -1) {
 	printf ("Unable to initialise GPIO mode.\n");
         exit (EXIT_FAILURE);
     }
