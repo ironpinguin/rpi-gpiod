@@ -197,7 +197,7 @@ int read_client(int socketfd) {
     perror("accept");
   }
 
-  while ( (n=read(client_socket_fd,buf,BUFFER_SIZE)) != -1 ) {
+  while ( (n=read(client_socket_fd,buf,BUFFER_SIZE)) > 0 ) {
     if (n == -1) {
       perror("read");
     }
