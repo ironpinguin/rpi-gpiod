@@ -1,4 +1,4 @@
-INC_DIR   = -I../../wiringPi/wiringPi
+INC_DIR   = -I../../wiringPi/wiringPi -I../lib/wiringPi/wiringPi
 LIB_DIR   = -L/usrl/local/lib
 
 LIBS      = -lwiringPi -lpthread
