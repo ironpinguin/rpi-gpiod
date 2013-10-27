@@ -1,0 +1,3 @@
+[submodule "lib/rpi-dog128"]
+	path = lib/rpi-dog128
+	url = https://github.com/ironpinguin/rpi-dog128.git
