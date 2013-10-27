@@ -223,8 +223,8 @@ void do_lcd_commands(int client_socket_fd, char *buf) {
     int n = sscanf(buf, "%s %d", command, &x1);
     if (n != 2) {
       write_error_msg_to_client(client_socket_fd, "unexpected parameters for set backlight");
-    } else if (x1 < 0 || x1 > 1024) {
-      write_error_msg_to_client(client_socket_fd, "parameters for set backlight can be only 0 or 1024");
+    } else if (x1 < 0 || x1 > 100) {
+      write_error_msg_to_client(client_socket_fd, "parameters for set backlight can be only 0 or 100");
     } else {
       backlight(x1);
     }
