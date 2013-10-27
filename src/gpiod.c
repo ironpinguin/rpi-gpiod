@@ -408,7 +408,7 @@ int main(int argc, char **argv) {
        socket_filename = optarg;
        break;
      case 'a':
-       if (is_valid_pin_num(atoi(optarg)) {
+       if (is_valid_pin_num(atoi(optarg))) {
          lcd_di = atoi(optarg);
        } else {
          printf("Only valid Pinnumber between 1 and 16 allowed!\n");
@@ -417,7 +417,7 @@ int main(int argc, char **argv) {
        }
        break;
      case 'l':
-       if (is_valid_pin_num(atoi(optarg)) {
+       if (is_valid_pin_num(atoi(optarg))) {
          lcd_led = atoi(optarg);
        } else {
          printf("Only valid Pinnumber between 1 and 16 allowed!\n");
@@ -426,7 +426,7 @@ int main(int argc, char **argv) {
        }
        break;
      case 'c':
-       if (is_valid_pin_num(atoi(optarg)) {
+       if (is_valid_pin_num(atoi(optarg))) {
          lcd_spics = atoi(optarg);
        } else {
          printf("Only 0 or 1 allowed!\n");
