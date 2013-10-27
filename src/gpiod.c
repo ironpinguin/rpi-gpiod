@@ -188,7 +188,7 @@ void do_lcd_commands(int client_socket_fd, char *buf) {
     if (n != 6) {
       write_error_msg_to_client(client_socket_fd, "unexpected parameters for draw rect");
     } else {
-      rect(x1, y2, x2, y2, fill);
+      rect(x1, y1, x2, y2, fill);
     }
   } else if (strncmp(command, LCD_CIRCLE, strlen(LCD_CIRCLE)) == 0) {
     init_lcd();
