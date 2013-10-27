@@ -1,3 +1,6 @@
+[submodule "lib/wiringPi"]
+	path = lib/wiringPi
+	url = git://git.drogon.net/wiringPi
 [submodule "lib/rpi-dog128"]
 	path = lib/rpi-dog128
 	url = https://github.com/ironpinguin/rpi-dog128.git

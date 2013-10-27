@@ -20,7 +20,7 @@ then
     fi
 fi
 
-echo "executing LD_PRELOAD=$PRELOAD_LIB ./$GPIOD -d -s $SOCKET > $REPORT &"
+echo "executing LD_PRELOAD=$PRELOAD_LIB ./$GPIOD -d -v -s $SOCKET > $REPORT &"
 
 LD_PRELOAD=$PRELOAD_LIB ./$GPIOD -d -s $SOCKET > $REPORT &
 GPIOD_PID=$!
