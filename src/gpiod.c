@@ -49,12 +49,18 @@ char *socket_filename;
 int flag_verbose     = 0;
 int flag_dont_detach = 0;
 int lcd_is_init      = 0;
+int lcd_di           = DI;
+int lcd_led          = LED;
+int lcd_spics        = SPICS;
 
 void usage() {
   printf("Usage: gpio [ -d ] [ -v ] [ -s socketfile ] [ -h ]\n");
   printf("    -d           don't daemonize\n");
   printf("    -v           verbose\n");
   printf("    -s sockefile use the given file for for socket\n");
+  printf("    -a diport    set di pin of the lcd display (default: %d)\n", DI);
+  printf("    -l ledport   set backlight pwm port of the lcd display (default: %d)\n", LED);
+  printf("    -c spics     set the spi chipselect fo the lcd display (default: %d)\n", SPICS);
   printf("    -h           show help (this meassge)\n");
 }
 
@@ -135,7 +141,7 @@ void write_all_data_to_client(int fd) {
 void init_lcd() {
   if (!lcd_is_init) {
     // TODO: set di, led and spics per commandline parameter.
-    init(DI, LED, 0);
+    init(lcd_di, lcd_led, lcd_spics);
     initFonts();
     lcd_is_init = 1;
   }
@@ -386,7 +392,7 @@ int main(int argc, char **argv) {
 #ifndef NO_SIG_HANDLER
   struct sigaction sig_act, sig_oact;
 #endif
-  while ((ch = getopt(argc, argv, "dhvs:")) != -1) {
+  while ((ch = getopt(argc, argv, "dhvs:a:l:c:")) != -1) {
     switch (ch) {
       case 'd':
         flag_dont_detach = 1;
@@ -400,6 +406,33 @@ int main(int argc, char **argv) {
        break;
      case 's':
        socket_filename = optarg;
+       break;
+     case 'a':
+       if (is_valid_pin_num(optarg)) {
+         lcd_di = optarg;
+       } else {
+         printf("Only valid Pinnumber between 1 and 16 allowed!\n");
+         usage();
+         exit(EXIT_FAILURE);
+       }
+       break;
+     case 'l':
+       if (is_valid_pin_num(optarg)) {
+         lcd_led = optarg;
+       } else {
+         printf("Only valid Pinnumber between 1 and 16 allowed!\n");
+         usage();
+         exit(EXIT_FAILURE);
+       }
+       break;
+     case 'c':
+       if (is_valid_pin_num(optarg)) {
+         lcd_spics = optarg;
+       } else {
+         printf("Only 0 or 1 allowed!\n");
+         usage();
+         exit(EXIT_FAILURE);
+       }
        break;
      default:
        usage();
