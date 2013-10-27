@@ -135,7 +135,7 @@ void write_all_data_to_client(int fd) {
 void init_lcd() {
   if (!lcd_is_init) {
     // TODO: set di, led and spics per commandline parameter.
-    init(DI, LCD, 0);
+    init(DI, LED, 0);
     initFonts();
     lcd_is_init = 1;
   }
@@ -170,7 +170,7 @@ void do_lcd_commands(int client_socket_fd, char *buf) {
   } else if (strncmp(command, LCD_SHOW, strlen(LCD_SHOW)) == 0) {
     init_lcd();
     show();
-  } else if (strncmp(command, LCD_CLEAN, strlen(LCD_CLEAR)) == 0) {
+  } else if (strncmp(command, LCD_CLEAR, strlen(LCD_CLEAR)) == 0) {
     init_lcd();
     clear();
   } else if (strncmp(command, LCD_INVERT, strlen(LCD_INVERT)) == 0) {
