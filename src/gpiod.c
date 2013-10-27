@@ -160,7 +160,7 @@ int is_valid_pin_mode(char *mode_str) {
 }
 
 void do_lcd_commands(int client_socket_fd, char *buf) {
-  char command[BUFFER_SIZE], text[BUFFER_SIZE], next[BUFFER_SIZE];
+  char command[BUFFER_SIZE], text[BUFFER_SIZE];
   int x1, x2, y1, y2, r1, r2, fill, fontId;
   int n = sscanf(buf, "%s", command);
   if (n != 1) {
@@ -408,8 +408,8 @@ int main(int argc, char **argv) {
        socket_filename = optarg;
        break;
      case 'a':
-       if (is_valid_pin_num(optarg)) {
-         lcd_di = optarg;
+       if (is_valid_pin_num(atoi(optarg)) {
+         lcd_di = atoi(optarg);
        } else {
          printf("Only valid Pinnumber between 1 and 16 allowed!\n");
          usage();
@@ -417,8 +417,8 @@ int main(int argc, char **argv) {
        }
        break;
      case 'l':
-       if (is_valid_pin_num(optarg)) {
-         lcd_led = optarg;
+       if (is_valid_pin_num(atoi(optarg)) {
+         lcd_led = atoi(optarg);
        } else {
          printf("Only valid Pinnumber between 1 and 16 allowed!\n");
          usage();
@@ -426,8 +426,8 @@ int main(int argc, char **argv) {
        }
        break;
      case 'c':
-       if (is_valid_pin_num(optarg)) {
-         lcd_spics = optarg;
+       if (is_valid_pin_num(atoi(optarg)) {
+         lcd_spics = atoi(optarg);
        } else {
          printf("Only 0 or 1 allowed!\n");
          usage();
