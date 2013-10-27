@@ -16,14 +16,22 @@
 
 #include "gpiod.h"
 #include "wiringPi.h"
+#include "dog128.h"
 
 #define PID_FILE "/var/run/gpiod.pid"
-#define BUFFER_SIZE 64
+#define BUFFER_SIZE 128
 
 #define CLIENT_READ    "READ"
 #define CLIENT_READALL "READALL"
 #define CLIENT_WRITE   "WRITE"
 #define CLIENT_MODE    "MODE"
+#define CLIENT_LCD     "LCD"
+#define LCD_CLEAR      "CLEAR"
+#define LCD_SHOW       "SHOW"
+#define LCD_LINE       "LINE"
+#define LCD_RECT       "RECT"
+#define LCD_INIT       "INIT"
+#define LCD_CIRCLE     "CIRCLE"
 
 #define SERVER_OK    "OK"
 #define SERVER_ERROR "ERROR"
@@ -126,6 +134,31 @@ int is_valid_pin_mode(char *mode_str) {
   return ((strncmp(mode_str, "IN", 2) == 0) || (strncmp(mode_str, "OUT", 3) == 0));
 }
 
+void do_lcd_commands(int client_socket_fd, char *buf) {
+  char command[BUFFER_SIZE], text[BUFFER_SIZE], next[BUFFER_SIZE];
+  int x1, x2, y1, y2, r1, r2, fill, fontId;
+  int n = sscanf(buf, "%s", command);
+  if (n != 1) {
+    write_error_msg_to_client(client_socket_fd, "parameter of type string expected");
+  } else if (strcmp(command, LCD_INIT, strlen(LCD_INIT)) == 0) {
+    init(DI, LCD, 0);
+    initFonts();
+  } else if (strcmp(command, LCD_LINE, strlen(LCD_LINE)) == 0) {
+    int n = sscanf(buf, "%s %d %d %d %d", command, &x1, &y1, &x2, &y2);
+    if (n != 5) {
+      write_error_msg_to_client(client_socket_fd, "unexpected parameters for draw line");
+    } else {
+      line(x1, y1, x2, y2);
+    }
+  } else if (strcmp(command, LCD_SHOW, strlen(LCD_SHOW)) == 0) {
+    show();
+  } else if (strcmp(command, LCD_CLEAN, strlen(LCD_CLEAR)) == 0) {
+    clear();
+  } else {
+    write_error_msg_to_client(client_socket_fd, "unknown lcd command");
+  }
+}
+
 void do_read_from_pin(int client_socket_fd, char *buf) {
   int pin_num;
   int n = sscanf(buf, "%d", &pin_num);
@@ -213,6 +246,8 @@ int read_client(int socketfd) {
       do_write_to_pin(client_socket_fd, buf + strlen(CLIENT_WRITE) + 1);
     } else if (strncmp(buf, CLIENT_MODE, 4) == 0) {
       do_set_pin_mode(client_socket_fd, buf + strlen(CLIENT_MODE) + 1);
+    } else if (strncmp(buf, CLIENT_LCD, strlen(CLIENT_LCD)) == 0) {
+      do_lcd_commands(client_socket_fd, buf + strlen(CLIENT_LCD) + 1);
     } else {
       write_error_msg_to_client(client_socket_fd,  "unkown command");
     }
