@@ -1,7 +1,7 @@
 INC_DIR   = -I../../wiringPi/wiringPi -I../lib/wiringPi/wiringPi -I../lib/rpi-dog128/src
 LIB_DIR   = -L/usrl/local/lib -L../lib/rpi-dog128/src
 
-LIBS      = -lwiringPi -lpthread -lrpi-dog128
+LIBS      = -lwiringPi -lpthread -ldog128
 
 SHLIB_EXT = so
 
