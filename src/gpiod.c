@@ -376,15 +376,16 @@ int read_client(int socketfd) {
   socklen_t address_len = sizeof(address);
   int client_socket_fd, n, parted = 0, len;
   char new_line = '\n';
-  char *command, *rest, *part, buf[BUFFER_SIZE];
+  char *command, *rest = NULL, *part = NULL, *step, buf[BUFFER_SIZE];
   
+  step = malloc(BUFFER_SIZE*2);
   bzero(buf, BUFFER_SIZE);
 
   if ((client_socket_fd = accept(socketfd, (struct sockaddr *) &address, &address_len)) < 0) {
     perror("accept");
   }
 
-  while ( (n = read(client_socket_fd, buf, BUFFER_SIZE)) > 0 ) {
+  while ( (n = read(client_socket_fd, buf, BUFFER_SIZE-1)) > 0 ) {
     if (n == -1) {
       perror("read");
     }
@@ -397,42 +398,57 @@ int read_client(int socketfd) {
     if (parted) {
         part = strdup(rest);
     } else {
-        free(part);
+        if (part != NULL) {
+            printf("FREE: %s\n", part);
+            free(part);
+        }
         part = NULL;
     }
     
     if (strrpos(buf, new_line) < len - 1) {
+        printf("PARTED!!\n");
         parted = 1;
     } else {
         parted = 0;
     }
     
-    if (parted)
     command = strtok(buf, "\n");
     
     if (command == NULL) {
         perror("can't read command");
     } else {
         if (part != NULL) {
-            rest = strcat(part, command);
+            printf("INFO part to add: %s\n", part);
+            bzero(step, BUFFER_SIZE*2);
+            strcpy(step, part);
+            printf("INFO step: %s\n", step);
+            rest = strcat(step, command);
         } else {
             rest = strdup(command);
         }
+        printf("INFO FIRST: %s\n", rest);
         read_command(rest, client_socket_fd);
         
     }
     
     while(command != NULL) {
         command = strtok(NULL, "\n");
-        if (command != NULL || (command == NULL && parted == 0)) {
-            read_command(command, client_socket_fd);
-        }
         if (command != NULL) {
-            free(rest);
-            rest = 0;
+            printf("INFO: %s\n", command);
+            read_command(rest, client_socket_fd);
+            if (rest != NULL) {
+                printf("Free rest: %s\n", rest);
+                free(rest);
+            }
+            rest = NULL;
             rest = strdup(command);
         }
     }
+    if (parted == 0) {
+        printf("INFO not parted: %s\n", rest);
+        read_command(rest, client_socket_fd);
+    }
+    bzero(buf, BUFFER_SIZE);
   }
   close(client_socket_fd);
 
