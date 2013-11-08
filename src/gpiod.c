@@ -399,14 +399,12 @@ int read_client(int socketfd) {
         part = strdup(rest);
     } else {
         if (part != NULL) {
-            printf("FREE: %s\n", part);
             free(part);
         }
         part = NULL;
     }
     
     if (strrpos(buf, new_line) < len - 1) {
-        printf("PARTED!!\n");
         parted = 1;
     } else {
         parted = 0;
@@ -417,27 +415,23 @@ int read_client(int socketfd) {
     if (command == NULL) {
         perror("can't read command");
     } else {
+        if (rest != NULL) {
+            free(rest);
+        }
         if (part != NULL) {
-            printf("INFO part to add: %s\n", part);
             bzero(step, BUFFER_SIZE*2);
             strcpy(step, part);
-            printf("INFO step: %s\n", step);
-            rest = strcat(step, command);
+            rest = strdup(strcat(step, command));
         } else {
             rest = strdup(command);
         }
-        printf("INFO FIRST: %s\n", rest);
-        read_command(rest, client_socket_fd);
-        
     }
     
     while(command != NULL) {
         command = strtok(NULL, "\n");
         if (command != NULL) {
-            printf("INFO: %s\n", command);
             read_command(rest, client_socket_fd);
             if (rest != NULL) {
-                printf("Free rest: %s\n", rest);
                 free(rest);
             }
             rest = NULL;
@@ -445,7 +439,6 @@ int read_client(int socketfd) {
         }
     }
     if (parted == 0) {
-        printf("INFO not parted: %s\n", rest);
         read_command(rest, client_socket_fd);
     }
     bzero(buf, BUFFER_SIZE);
