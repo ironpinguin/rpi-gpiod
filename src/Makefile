@@ -24,7 +24,7 @@ $(MOCK_LIB): $(MOCK_OBJ)
 	$(CC) -shared -o $@ $(MOCK_OBJ)
 
 gpiod_mock: $(OBJ) $(MOCK_LIB)
-	$(CC) -o $@  gpiod.o $(MOCK_OBJ) -lwiringPi_mock -ldog128 -L.
+	$(CC) -o $@  gpiod.o $(MOCK_OBJ) -lwiringPi_mock ../lib/rpi-dog128/src/libdog128.so -L.
 
 .c.o:
 	$(CC) $(CFLAGS) $(EXTRA_CFLAGS) -c $<

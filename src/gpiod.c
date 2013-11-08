@@ -64,6 +64,17 @@ void usage() {
   printf("    -h           show help (this meassge)\n");
 }
 
+int strrpos(char *string, char niddle) {
+    char *pos_info;
+    
+    pos_info = strrchr(string, niddle);
+    if (pos_info == NULL) {
+        return -1;
+    } else {
+        return pos_info - string;
+    }
+}
+
 void delete_pid_file() {
   if (unlink(PID_FILE) == -1) {
     perror(PID_FILE);
@@ -344,38 +355,83 @@ void do_set_pin_mode(int client_socket_fd, char *buf) {
   }
 }
 
+void read_command(char *command, int client_socket_fd) {
+    if (strncmp(command, CLIENT_READALL, 7) == 0) {
+      write_all_data_to_client(client_socket_fd);
+    } else if (strncmp(command, CLIENT_READ, strlen(CLIENT_READ)) == 0) {
+      do_read_from_pin(client_socket_fd, command + strlen(CLIENT_READ) + 1);
+    } else if (strncmp(command, CLIENT_WRITE, strlen(CLIENT_WRITE)) == 0) {
+      do_write_to_pin(client_socket_fd, command + strlen(CLIENT_WRITE) + 1);
+    } else if (strncmp(command, CLIENT_MODE, 4) == 0) {
+      do_set_pin_mode(client_socket_fd, command + strlen(CLIENT_MODE) + 1);
+    } else if (strncmp(command, CLIENT_LCD, strlen(CLIENT_LCD)) == 0) {
+      do_lcd_commands(client_socket_fd, command + strlen(CLIENT_LCD) + 1);
+    } else {
+      write_error_msg_to_client(client_socket_fd,  "unkown command");
+    }
+}
+
 int read_client(int socketfd) {
   struct sockaddr_un address;
   socklen_t address_len = sizeof(address);
-  int client_socket_fd;
-  int n;
-  char buf[BUFFER_SIZE];
+  int client_socket_fd, n, parted = 0, len;
+  char new_line = '\n';
+  char *command, *rest, *part, buf[BUFFER_SIZE];
+  
   bzero(buf, BUFFER_SIZE);
 
-  if ((client_socket_fd = accept(socketfd,(struct sockaddr *)&address,&address_len)) < 0) {
+  if ((client_socket_fd = accept(socketfd, (struct sockaddr *) &address, &address_len)) < 0) {
     perror("accept");
   }
 
-  while ( (n=read(client_socket_fd,buf,BUFFER_SIZE)) > 0 ) {
+  while ( (n = read(client_socket_fd, buf, BUFFER_SIZE)) > 0 ) {
     if (n == -1) {
       perror("read");
     }
     if (flag_verbose) {
         printf("client send: %s\n", buf);
     }
-
-    if (strncmp(buf, CLIENT_READALL, 7) == 0) {
-      write_all_data_to_client(client_socket_fd);
-    } else if (strncmp(buf, CLIENT_READ, strlen(CLIENT_READ)) == 0) {
-      do_read_from_pin(client_socket_fd, buf + strlen(CLIENT_READ) + 1);
-    } else if (strncmp(buf, CLIENT_WRITE, strlen(CLIENT_WRITE)) == 0) {
-      do_write_to_pin(client_socket_fd, buf + strlen(CLIENT_WRITE) + 1);
-    } else if (strncmp(buf, CLIENT_MODE, 4) == 0) {
-      do_set_pin_mode(client_socket_fd, buf + strlen(CLIENT_MODE) + 1);
-    } else if (strncmp(buf, CLIENT_LCD, strlen(CLIENT_LCD)) == 0) {
-      do_lcd_commands(client_socket_fd, buf + strlen(CLIENT_LCD) + 1);
+    
+    len = strlen(buf);
+    
+    if (parted) {
+        part = strdup(rest);
     } else {
-      write_error_msg_to_client(client_socket_fd,  "unkown command");
+        free(part);
+        part = NULL;
+    }
+    
+    if (strrpos(buf, new_line) < len - 1) {
+        parted = 1;
+    } else {
+        parted = 0;
+    }
+    
+    if (parted)
+    command = strtok(buf, "\n");
+    
+    if (command == NULL) {
+        perror("can't read command");
+    } else {
+        if (part != NULL) {
+            rest = strcat(part, command);
+        } else {
+            rest = strdup(command);
+        }
+        read_command(rest, client_socket_fd);
+        
+    }
+    
+    while(command != NULL) {
+        command = strtok(NULL, "\n");
+        if (command != NULL || (command == NULL && parted == 0)) {
+            read_command(command, client_socket_fd);
+        }
+        if (command != NULL) {
+            free(rest);
+            rest = 0;
+            rest = strdup(command);
+        }
     }
   }
   close(client_socket_fd);
