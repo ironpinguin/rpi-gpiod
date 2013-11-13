@@ -2,3 +2,6 @@ src/gpiod.o
 src/wiringpimock.o
 src/gpiod_mock
 src/libwiringPi_mock.so
+.cproject
+.project
+nbproject
