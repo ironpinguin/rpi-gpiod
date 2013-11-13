@@ -396,7 +396,7 @@ int read_client(int socketfd) {
     len = strlen(buf);
     
     if (parted) {
-        part = strdup(rest);
+        part = strndup(rest, strlen(rest));
     } else {
         if (part != NULL) {
             free(part);
@@ -419,11 +419,12 @@ int read_client(int socketfd) {
             free(rest);
         }
         if (part != NULL) {
-            bzero(step, BUFFER_SIZE*2);
-            strcpy(step, part);
-            rest = strdup(strcat(step, command));
+            bzero(step, BUFFER_SIZE * 2);
+            strncpy(step, part, strlen(part));
+            strncat(step, command, strlen(command));
+            rest = strndup(step, strlen(step));
         } else {
-            rest = strdup(command);
+            rest = strndup(command, strlen(command));
         }
     }
     
@@ -435,7 +436,7 @@ int read_client(int socketfd) {
                 free(rest);
             }
             rest = NULL;
-            rest = strdup(command);
+            rest = strndup(command, strlen(command));
         }
     }
     if (parted == 0) {
@@ -545,7 +546,7 @@ int main(int argc, char **argv) {
 
   bzero((char *) &address, sizeof(address));
   address.sun_family = AF_UNIX;
-  strcpy(address.sun_path, socket_filename);
+  strncpy(address.sun_path, socket_filename, strlen(socket_filename));
   address_len = strlen(address.sun_path) + sizeof(address.sun_family) + 1;
 
   if (flag_verbose) {
