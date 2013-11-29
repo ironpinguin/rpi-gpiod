@@ -18,7 +18,7 @@
 #include "wiringPi.h"
 #include "dog128.h"
 
-#define PID_FILE "/var/run/gpiod.pid"
+#define PID_FILE "gpiod.pid"
 #define BUFFER_SIZE 128
 
 #define CLIENT_READ    "READ"
@@ -171,7 +171,7 @@ int is_valid_pin_mode(char *mode_str) {
 }
 
 void do_lcd_commands(int client_socket_fd, char *buf) {
-  char command[BUFFER_SIZE], text[BUFFER_SIZE];
+  char command[BUFFER_SIZE], *text;
   int x1, x2, y1, y2, r1, r2, fill, fontId;
   int n = sscanf(buf, "%s", command);
   if (n != 1) {
@@ -267,7 +267,8 @@ void do_lcd_commands(int client_socket_fd, char *buf) {
     }
   } else if (strncmp(command, LCD_TEXT, strlen(LCD_TEXT)) == 0) {
     init_lcd();
-    int n = sscanf(buf, "%s %d %d %d %s", command, &fontId, &x1, &y1, text);
+    text = malloc(strlen(buf) + 1);
+    int n = sscanf(buf, "%s %d %d %d %[^\t\n]", command, &fontId, &x1, &y1, text);
     if (n != 5) {
       write_error_msg_to_client(client_socket_fd, "unexpected parameters to write text");
     } else if (fontId < 0 || fontId > 33) {
@@ -280,7 +281,7 @@ void do_lcd_commands(int client_socket_fd, char *buf) {
     write_msg_to_client(client_socket_fd, "LCD Commands:");
     write_msg_to_client(client_socket_fd, "LCD CLEAR => clear screen buffer.");
     write_msg_to_client(client_socket_fd, "LCD SHOW => wirte screen buffer to lcd.");
-    write_msg_to_client(client_socket_fd, "LCD BACKLIGHT value => change backlight between 0 and 1024.");
+    write_msg_to_client(client_socket_fd, "LCD BACKLIGHT value => change backlight between 0 and 100%.");
     write_msg_to_client(client_socket_fd, "LCD CONTRAST value => change contrast between 5 and 25.");
     write_msg_to_client(client_socket_fd, "LCD DSPNORMAL value => change display 0 => normal, 1 => reverse.");
     write_msg_to_client(client_socket_fd, "LCD INVERT => invert display.");
@@ -411,7 +412,7 @@ int read_client(int socketfd) {
     }
     
     command = strtok(buf, "\n");
-    
+
     if (command == NULL) {
         perror("can't read command");
     } else {
@@ -426,6 +427,10 @@ int read_client(int socketfd) {
         } else {
             rest = strndup(command, strlen(command));
         }
+    }
+    
+    if (flag_verbose) {
+        printf("client command to process: %s\n", command);
     }
     
     while(command != NULL) {

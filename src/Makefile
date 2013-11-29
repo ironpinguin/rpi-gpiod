@@ -18,13 +18,20 @@ OBJ       = $(SRC:.c=.o)
 gpiod: $(OBJ)
 	$(CC) -o $@ gpiod.o $(LD_FLAGS) 
 
-mock_lib: $(MOCK_LIB)
+mock_lib: ../lib/rpi-dog128/src/libwiringPi_mock.a
+	$(MAKE) --directory ../lib/rpi-dog128 mock
+
+glmock_lib: ../lib/rpi-dog128/src/libwiringPi_glmock.a
+	$(MAKE) --directory ../lib/rpi-dog128 glmock
 
 $(MOCK_LIB): $(MOCK_OBJ)
 	$(CC) -shared -o $@ $(MOCK_OBJ)
 
-gpiod_mock: $(OBJ) $(MOCK_LIB)
-	$(CC) -o $@  gpiod.o $(MOCK_OBJ) -lwiringPi_mock ../lib/rpi-dog128/src/libdog128.so -L.
+gpiod_mock: mock_lib $(OBJ) 
+	$(CC) -o $@  gpiod.o  ../lib/rpi-dog128/src/libwiringPi_mock.a -L.
+
+gpiod_glmock: glmock_lib $(OBJ)
+	$(CC) -o $@  gpiod.o  ../lib/rpi-dog128/src/libwiringPi_glmock.a -L.
 
 .c.o:
 	$(CC) $(CFLAGS) $(EXTRA_CFLAGS) -c $<
