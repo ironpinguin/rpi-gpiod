@@ -18,7 +18,7 @@
 #include "wiringPi.h"
 #include "dog128.h"
 
-#define PID_FILE "gpiod.pid"
+#define PID_FILE "/var/run/gpiod.pid"
 #define BUFFER_SIZE 128
 
 #define CLIENT_READ    "READ"
@@ -510,7 +510,7 @@ int main(int argc, char **argv) {
        exit(1);
     }
   }
-
+  
   if (!flag_dont_detach) {
     pid = fork();
     if (pid < 0) {
