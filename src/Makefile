@@ -1,7 +1,7 @@
 INC_DIR   = -I../../wiringPi/wiringPi -I../lib/wiringPi/wiringPi -I../lib/rpi-dog128/src
 LIB_DIR   = -L/usrl/local/lib -L../lib/rpi-dog128/src
 
-LIBS      = -lwiringPi -lpthread -ldog128
+LIBS      = -lwiringPi -lpthread -ldog128 -lconfig
 
 SHLIB_EXT = so
 
@@ -31,10 +31,10 @@ $(MOCK_LIB): $(MOCK_OBJ)
 	$(CC) -shared -o $@ $(MOCK_OBJ)
 
 gpiod_mock: mock_lib $(OBJ) 
-	$(CC) -o $@  gpiod.o  ../lib/rpi-dog128/src/libwiringPi_mock.a -L.
+	$(CC) -o $@  gpiod.o  ../lib/rpi-dog128/src/libwiringPi_mock.a -L. -lpthread -lconfig
 
 gpiod_glmock: glmock_lib $(OBJ)
-	$(CC) -o $@  gpiod.o  -lwiringPi_glmock $(CFLAGS) $(LIB_DIR) -lpthread -ldog128
+	$(CC) -o $@  gpiod.o  -lwiringPi_glmock $(CFLAGS) $(LIB_DIR) -lpthread -ldog128 -lconfig
 
 .c.o:
 	$(CC) $(CFLAGS) $(EXTRA_CFLAGS) -c $<
