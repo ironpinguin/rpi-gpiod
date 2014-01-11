@@ -24,7 +24,7 @@ gpiod: $(OBJ)
 mock_lib: ../lib/rpi-dog128/src/libwiringPi_mock.a
 	$(MAKE) --directory ../lib/rpi-dog128 mock
 
-glmock_lib: ../lib/rpi-dog128/src/libwiringPi_glmock.a
+glmock_lib: ../lib/rpi-dog128/src/libwiringPi_glmock.so
 	$(MAKE) --directory ../lib/rpi-dog128 glmock
 
 $(MOCK_LIB): $(MOCK_OBJ)
@@ -34,7 +34,7 @@ gpiod_mock: mock_lib $(OBJ)
 	$(CC) -o $@  gpiod.o  ../lib/rpi-dog128/src/libwiringPi_mock.a -L.
 
 gpiod_glmock: glmock_lib $(OBJ)
-	$(CC) -o $@  gpiod.o  ../lib/rpi-dog128/src/libwiringPi_glmock.a -L.
+	$(CC) -o $@  gpiod.o  -lwiringPi_glmock $(CFLAGS) $(LIB_DIR) -lpthread -ldog128
 
 .c.o:
 	$(CC) $(CFLAGS) $(EXTRA_CFLAGS) -c $<
