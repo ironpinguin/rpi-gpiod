@@ -5,11 +5,13 @@ LIBS      = -lwiringPi -lpthread -ldog128 -lconfig
 
 SHLIB_EXT = so
 
-INSTALL_DIR = /usr/local/bin
+INSTALL_DIR        = /usr/local/bin
+INSTALL_DIR_CONFIG = /etc
+INSTALL_DIR_INIT   = /etc/init.d
 
 MOCK_BIN  = gpiod_mock
 MOCK_OBJ  = wiringpimock.o
-MOCK_LIB = libwiringPi_mock.$(SHLIB_EXT)
+MOCK_LIB  = libwiringPi_mock.$(SHLIB_EXT)
 
 LD_FLAGS  = $(LIB_DIR) $(LIBS)
 CFLAGS    = -Wall -g $(INC_DIR) -fPIC
@@ -47,7 +49,7 @@ install: install-bin
 install-bin:
 	@echo "[Install Binary]"
 	@install -m 0755 gpiod $(INSTALL_DIR)/
-	@install -m 0755 gpiod.conf $(INSTALL_DIR_CONFIG)/
+	@install -m 0755 gpiod.cfg $(INSTALL_DIR_CONFIG)/
 	@install -m 0755 gpiod.init $(INSTALL_DIR_INIT)/gpiod
 	@insserv gpiod
 	@mkdir -p /var/lib/gpiod
@@ -55,7 +57,7 @@ install-bin:
 uninstall:
 	@echo "[UnInstall]"
 	@rm -f $(INSTALL_DIR)/gpiod
-	@rm -f $(INSTALL_DIR_CONFIG)/gpiod.conf
+	@rm -f $(INSTALL_DIR_CONFIG)/gpiod.cfg
 	@insserv -r gpiod
 	@rm -f $(INSTALL_DIR_INIT)/gpiod
 

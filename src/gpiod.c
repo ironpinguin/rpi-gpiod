@@ -528,7 +528,7 @@ int main(int argc, char **argv) {
   config_setting_t *setting, *interrupt_setting;
   char const *config_socket, *inter_name, *inter_type_string;
   char *config_file_name;
-  int ch, inter_pin, inter_type, inter_wait, r, fail_read_interrupt;
+  int ch, inter_pin, inter_type, inter_wait, r;
   pid_t pid;
   int socketfd, read_config = 0;
   struct sockaddr_un address;
@@ -645,8 +645,7 @@ int main(int argc, char **argv) {
             continue;
           }
           
-          if (!fail_read_interrupt && r <= 10) {
-            interrupt_infos[r] = malloc(sizeof(InterruptInfo));
+          if (r <= 10) {
             interrupt_infos[r].pin = inter_pin;
             interrupt_infos[r].wait = inter_wait;
             interrupt_infos[r].type = inter_type;
