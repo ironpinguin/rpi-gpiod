@@ -53,6 +53,7 @@ typedef struct InterruptInfo {
   char *name; //> Interrupt name to write on socket.
   int wait;  //> Wait until next interrupt will be used.
   unsigned long occure; //> Last occure of interrupt in unix timestamp.
+  int pud; //> Pull resistior mode.
 } InterruptInfo;
 
 int interrupts_count = 0;
@@ -526,9 +527,9 @@ int read_client(int socketfd) {
 int main(int argc, char **argv) {
   config_t cfg;
   config_setting_t *setting, *interrupt_setting;
-  char const *config_socket, *inter_name, *inter_type_string;
+  char const *config_socket, *inter_name, *inter_type_string, *inter_pud;
   char *config_file_name;
-  int ch, inter_pin, inter_type, inter_wait, r;
+  int ch, inter_pin, inter_type, inter_wait, r, pud;
   pid_t pid;
   int socketfd, read_config = 0;
   struct sockaddr_un address;
@@ -631,10 +632,23 @@ int main(int argc, char **argv) {
           if (!(config_setting_lookup_int(interrupt_setting, "pin", &inter_pin)
               && config_setting_lookup_string(interrupt_setting, "type", &inter_type_string)
               && config_setting_lookup_string(interrupt_setting, "name", &inter_name)
-              && config_setting_lookup_int(interrupt_setting, "wait", &inter_wait))) {
+              && config_setting_lookup_int(interrupt_setting, "wait", &inter_wait)
+              && config_setting_lookup_string(interrupt_setting, "pud", &inter_pud))) {
+            // TODO: Error message if configuration is not valid
             continue;
           }
-
+          
+          if(strncmp(inter_pud, "none", strlen("none")) == 0) {
+            pud = PUD_OFF;
+          } else if (strncmp(inter_pud, "up", strlen("up")) == 0) {
+            pud = PUD_UP;
+          } else if (strncmp(inter_pud, "down", strlen("down")) == 0) {
+            pud = PUD_DOWN;
+          } else {
+            // TODO: Error message if configuration is not valid
+            continue;
+          }
+          
           if(strncmp(inter_type_string, "falling", strlen("falling")) == 0) {
             inter_type = INT_EDGE_FALLING;
           } else if (strncmp(inter_type_string, "rising", strlen("rising")) == 0) {
@@ -642,15 +656,17 @@ int main(int argc, char **argv) {
           } else if (strncmp(inter_type_string, "both", strlen("both")) == 0) {
             inter_type = INT_EDGE_BOTH;
           } else {
+            // TODO: Error message if configuration is not valid
             continue;
           }
           
           if (r <= 10) {
-            interrupt_infos[r].pin = inter_pin;
-            interrupt_infos[r].wait = inter_wait;
-            interrupt_infos[r].type = inter_type;
-            interrupt_infos[r].name = strndup(inter_name, strlen(inter_name));
+            interrupt_infos[r].pin    = inter_pin;
+            interrupt_infos[r].wait   = inter_wait;
+            interrupt_infos[r].type   = inter_type;
+            interrupt_infos[r].name   = strndup(inter_name, strlen(inter_name));
             interrupt_infos[r].occure = 0;
+            interrupt_infos[r].pud    = pud;
           }
         }
       }
@@ -725,7 +741,11 @@ int main(int argc, char **argv) {
     exit (EXIT_FAILURE);
   }
   
-  for (r=0; r < interrupts_count; r++) { 
+  
+  // Setup pin and interrupts callback from the configuration.
+  for (r=0; r < interrupts_count; r++) {
+    pinMode(interrupt_infos[r].pin, INPUT);
+    pullUpDnControl(interrupt_infos[r].pin, interrupt_infos[r].pud);
     switch (r) {
       case (0):
         wiringPiISR(interrupt_infos[r].pin, interrupt_infos[r].type, &interrupt0);
