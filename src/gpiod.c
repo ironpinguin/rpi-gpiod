@@ -728,34 +728,34 @@ int main(int argc, char **argv) {
   for (r=0; r < interrupts_count; r++) { 
     switch (r) {
       case (0):
-        wiringPiISR(inter_pin, inter_type, &interrupt0);
+        wiringPiISR(interrupt_infos[r].pin, interrupt_infos[r].type, &interrupt0);
         break;
       case (1):
-        wiringPiISR(inter_pin, inter_type, &interrupt1);
+        wiringPiISR(interrupt_infos[r].pin, interrupt_infos[r].type, &interrupt1);
         break;
       case (2):
-        wiringPiISR(inter_pin, inter_type, &interrupt2);
+        wiringPiISR(interrupt_infos[r].pin, interrupt_infos[r].type, &interrupt2);
         break;
       case (3):
-        wiringPiISR(inter_pin, inter_type, &interrupt3);
+        wiringPiISR(interrupt_infos[r].pin, interrupt_infos[r].type, &interrupt3);
         break;
       case (4):
-        wiringPiISR(inter_pin, inter_type, &interrupt4);
+        wiringPiISR(interrupt_infos[r].pin, interrupt_infos[r].type, &interrupt4);
         break;
       case (5):
-        wiringPiISR(inter_pin, inter_type, &interrupt5);
+        wiringPiISR(interrupt_infos[r].pin, interrupt_infos[r].type, &interrupt5);
         break;
       case (6):
-        wiringPiISR(inter_pin, inter_type, &interrupt6);
+        wiringPiISR(interrupt_infos[r].pin, interrupt_infos[r].type, &interrupt6);
         break;
       case (7):
-        wiringPiISR(inter_pin, inter_type, &interrupt7);
+        wiringPiISR(interrupt_infos[r].pin, interrupt_infos[r].type, &interrupt7);
         break;
       case (8):
-        wiringPiISR(inter_pin, inter_type, &interrupt8);
+        wiringPiISR(interrupt_infos[r].pin, interrupt_infos[r].type, &interrupt8);
         break;
       case (9):
-        wiringPiISR(inter_pin, inter_type, &interrupt9);
+        wiringPiISR(interrupt_infos[r].pin, interrupt_infos[r].type, &interrupt9);
         break;
     }
   }
