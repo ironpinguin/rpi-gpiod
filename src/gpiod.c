@@ -13,6 +13,8 @@
 #include <sys/un.h>
 #include <fcntl.h>
 #include <string.h>
+#include <sys/time.h>
+#include <libconfig.h>
 
 #include "gpiod.h"
 #include "wiringPi.h"
@@ -45,6 +47,16 @@
 #define SERVER_OK    "OK"
 #define SERVER_ERROR "ERROR"
 
+struct interrupt_info {
+  int pin; //> Gpio pin where the interrupt is occure.
+  int type; //> Interrupt type INT_EDGE_FALLING, INT_EDGE_RISING, INT_EDGE_BOTH
+  char *name; //> Interrupt name to write on socket.
+  int wait;  //> Wait until next interrupt will be used.
+  unsigned long occure; //> Last occure of interrupt in unix timestamp.
+} interrupt_infos[10];
+// = {{0, 0, "", 0, 0}, {0, 0, "", 0, 0}, {0, 0, "", 0, 0}, {0, 0, "", 0, 0}, {0, 0, "", 0, 0}, {0, 0, "", 0, 0}, {0, 0, "", 0, 0}, {0, 0, "", 0, 0}, {0, 0, "", 0, 0}, {0, 0, "", 0, 0},};
+
+int interrupts_count = 0;
 char *socket_filename;
 int flag_verbose     = 0;
 int flag_dont_detach = 0;
@@ -52,16 +64,18 @@ int lcd_is_init      = 0;
 int lcd_di           = DI;
 int lcd_led          = LED;
 int lcd_spics        = SPICS;
+int client_socket_fd = 0;
 
 void usage() {
-  printf("Usage: gpio [ -d ] [ -v ] [ -s socketfile ] [ -h ]\n");
-  printf("    -d           don't daemonize\n");
-  printf("    -v           verbose\n");
-  printf("    -s sockefile use the given file for for socket\n");
-  printf("    -a diport    set di pin of the lcd display (default: %d)\n", DI);
-  printf("    -l ledport   set backlight pwm port of the lcd display (default: %d)\n", LED);
-  printf("    -c spics     set the spi chipselect fo the lcd display (default: %d)\n", SPICS);
-  printf("    -h           show help (this meassge)\n");
+  printf("Usage: gpiod [ -d ] [ -v ] [ -s socketfile ] [ -a diport ] [ -l ledport ] [ -c spics ] [ -i configfile ] [ -h ]\n");
+  printf("    -d            don't daemonize\n");
+  printf("    -v            verbose\n");
+  printf("    -s sockefile  use the given file for for socket\n");
+  printf("    -a diport     set di pin of the lcd display (default: %d)\n", DI);
+  printf("    -l ledport    set backlight pwm port of the lcd display (default: %d)\n", LED);
+  printf("    -c spics      set the spi chipselect fo the lcd display (default: %d)\n", SPICS);
+  printf("    -i configfile use the given config file to configure gpiod\n");
+  printf("    -h            show help (this meassge)\n");
 }
 
 int strrpos(char *string, char niddle) {
@@ -151,7 +165,6 @@ void write_all_data_to_client(int fd) {
 
 void init_lcd() {
   if (!lcd_is_init) {
-    // TODO: set di, led and spics per commandline parameter.
     init(lcd_di, lcd_led, lcd_spics);
     initFonts();
     lcd_is_init = 1;
@@ -356,6 +369,59 @@ void do_set_pin_mode(int client_socket_fd, char *buf) {
   }
 }
 
+void interrupt(int id) {
+  unsigned long time;
+  struct timeval tv;
+  char msg[50];
+  gettimeofday(&tv, NULL);
+  time = (unsigned long) (unsigned long long)(tv.tv_sec) * 1000 + (unsigned long long)(tv.tv_usec) / 1000;
+  if (interrupt_infos[id].occure + interrupt_infos[id].wait <= time) {
+    interrupt_infos[id].occure = time;
+    sprintf(msg, "%s", interrupt_infos[id].name);
+    write_msg_to_client(client_socket_fd, msg);
+  }
+}
+
+void interrupt0(void) {
+  interrupt(0);
+}
+
+void interrupt1(void) {
+  interrupt(1);
+}
+
+void interrupt2(void) {
+  interrupt(2);
+}
+
+void interrupt3(void) {
+  interrupt(3);
+}
+
+void interrupt4(void) {
+  interrupt(4);
+}
+
+void interrupt5(void) {
+  interrupt(5);
+}
+
+void interrupt6(void) {
+  interrupt(6);
+}
+
+void interrupt7(void) {
+  interrupt(7);
+}
+
+void interrupt8(void) {
+  interrupt(8);
+}
+
+void interrupt9(void) {
+  interrupt(9);
+}
+
 void read_command(char *command, int client_socket_fd) {
     if (strncmp(command, CLIENT_READALL, 7) == 0) {
       write_all_data_to_client(client_socket_fd);
@@ -375,7 +441,7 @@ void read_command(char *command, int client_socket_fd) {
 int read_client(int socketfd) {
   struct sockaddr_un address;
   socklen_t address_len = sizeof(address);
-  int client_socket_fd, n, parted = 0, len;
+  int n, parted = 0, len;
   char new_line = '\n';
   char *command, *rest = NULL, *part = NULL, *step, buf[BUFFER_SIZE];
   
@@ -385,6 +451,7 @@ int read_client(int socketfd) {
   if ((client_socket_fd = accept(socketfd, (struct sockaddr *) &address, &address_len)) < 0) {
     perror("accept");
   }
+  
 
   while ( (n = read(client_socket_fd, buf, BUFFER_SIZE-1)) > 0 ) {
     if (n == -1) {
@@ -455,15 +522,19 @@ int read_client(int socketfd) {
 }
 
 int main(int argc, char **argv) {
-  int ch;
+  config_t cfg;
+  config_setting_t *setting, *interrupt_setting;
+  char const *config_socket, *inter_name, *inter_type_string;
+  char *config_file_name;
+  int ch, inter_pin, inter_type, inter_wait, r, fail_read_interrupt;
   pid_t pid;
-  int socketfd;
+  int socketfd, read_config = 0;
   struct sockaddr_un address;
   socklen_t address_len;
 #ifndef NO_SIG_HANDLER
   struct sigaction sig_act, sig_oact;
 #endif
-  while ((ch = getopt(argc, argv, "dhvs:a:l:c:")) != -1) {
+  while ((ch = getopt(argc, argv, "dhvs:a:l:c:i:")) != -1) {
     switch (ch) {
       case 'd':
         flag_dont_detach = 1;
@@ -505,10 +576,92 @@ int main(int argc, char **argv) {
          exit(EXIT_FAILURE);
        }
        break;
+     case 'i':
+       read_config = 1;
+       config_file_name = optarg;
+       break;
      default:
        usage();
        exit(1);
     }
+  }
+
+  if (read_config) {
+    config_init(&cfg);
+    /* Read the config file and about on error */
+    if (!config_read_file(&cfg, config_file_name)) {
+      printf("\n%s:%d - %s\n", config_error_file(&cfg), config_error_line(&cfg), config_error_text(&cfg));
+      config_destroy(&cfg);
+      exit(1);
+    }
+
+    if (config_lookup_string(&cfg, "socket", &config_socket)) {
+      socket_filename = strndup(config_socket, strlen(config_socket));
+      printf("Socket file configured from config file as: %s\n", socket_filename);
+    }
+
+    setting = config_lookup(&cfg, "lcd");
+    
+    if (setting != NULL) {
+      if (!config_setting_lookup_int(setting, "di_pin", &lcd_di) && flag_verbose) {
+        printf("Set DI Pin of the LCD Display to %i with config file\n", lcd_di);
+      }
+      if (!config_setting_lookup_int(setting, "led_pin", &lcd_led) && flag_verbose) {
+        printf("Set PWM LED Pin of the LCD Display to %i with config file\n", lcd_led);
+      }
+      if (!config_setting_lookup_int(setting, "spi_cs", &lcd_spics) && flag_verbose) {
+        printf("Set SPI CS Pin of the LCD Display to %i with config file\n", lcd_spics);
+      }
+    }
+
+    setting = config_lookup(&cfg, "interrupt");
+
+    if (setting != NULL)
+    {
+      if (config_setting_type(setting) == CONFIG_TYPE_LIST) {
+        interrupts_count = config_setting_length(setting);
+        // Max interrupts are 10 if more configured only the first 10 are used!
+        if (interrupts_count > 10) {
+          interrupts_count = 10;
+        }
+        for (r=0; r < interrupts_count; r++) {
+          interrupt_setting = config_setting_get_elem(setting, r);
+          fail_read_interrupt = 0;
+          if (!config_setting_lookup_int(interrupt_setting, "pin", &inter_pin)) {
+            fail_read_interrupt = 1;
+          }
+          if (config_setting_lookup_string(interrupt_setting, "type", &inter_type_string)) {
+            if(strncmp(inter_type_string, "falling", strlen("falling")) == 0) {
+              inter_type = INT_EDGE_FALLING;
+            } else if (strncmp(inter_type_string, "rising", strlen("rising")) == 0) {
+              inter_type = INT_EDGE_RISING;
+            } else if (strncmp(inter_type_string, "both", strlen("both")) == 0) {
+              inter_type = INT_EDGE_BOTH;
+            } else {
+              fail_read_interrupt = 1;
+            }
+          } else {
+            fail_read_interrupt = 1;
+          }
+          if (!config_setting_lookup_string(interrupt_setting, "name", &inter_name)) {
+            fail_read_interrupt = 1;
+          }
+          if (!config_setting_lookup_int(interrupt_setting, "wait", &inter_wait)) {
+            fail_read_interrupt = 1;
+          }
+          
+          if (!fail_read_interrupt && r <= 10) {
+            interrupt_infos[r].pin = inter_pin;
+            interrupt_infos[r].wait = inter_wait;
+            interrupt_infos[r].type = inter_type;
+            interrupt_infos[r].name = strndup(inter_name, strlen(inter_name));
+            interrupt_infos[r].occure = 0;
+          }
+        }
+      }
+    }
+
+    config_destroy(&cfg);
   }
   
   if (!flag_dont_detach) {
@@ -575,6 +728,41 @@ int main(int argc, char **argv) {
   if (wiringPiSetup() == -1) {
     printf ("Unable to initialise GPIO mode.\n");
     exit (EXIT_FAILURE);
+  }
+  
+  for (r=0; r < interrupts_count; r++) { 
+    switch (r) {
+      case (0):
+        wiringPiISR(inter_pin, inter_type, &interrupt0);
+        break;
+      case (1):
+        wiringPiISR(inter_pin, inter_type, &interrupt1);
+        break;
+      case (2):
+        wiringPiISR(inter_pin, inter_type, &interrupt2);
+        break;
+      case (3):
+        wiringPiISR(inter_pin, inter_type, &interrupt3);
+        break;
+      case (4):
+        wiringPiISR(inter_pin, inter_type, &interrupt4);
+        break;
+      case (5):
+        wiringPiISR(inter_pin, inter_type, &interrupt5);
+        break;
+      case (6):
+        wiringPiISR(inter_pin, inter_type, &interrupt6);
+        break;
+      case (7):
+        wiringPiISR(inter_pin, inter_type, &interrupt7);
+        break;
+      case (8):
+        wiringPiISR(inter_pin, inter_type, &interrupt8);
+        break;
+      case (9):
+        wiringPiISR(inter_pin, inter_type, &interrupt9);
+        break;
+    }
   }
 
   while(read_client(socketfd)) {
