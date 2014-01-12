@@ -47,16 +47,16 @@
 #define SERVER_OK    "OK"
 #define SERVER_ERROR "ERROR"
 
-struct interrupt_info {
+typedef struct InterruptInfo {
   int pin; //> Gpio pin where the interrupt is occure.
   int type; //> Interrupt type INT_EDGE_FALLING, INT_EDGE_RISING, INT_EDGE_BOTH
   char *name; //> Interrupt name to write on socket.
   int wait;  //> Wait until next interrupt will be used.
   unsigned long occure; //> Last occure of interrupt in unix timestamp.
-} interrupt_infos[10];
-// = {{0, 0, "", 0, 0}, {0, 0, "", 0, 0}, {0, 0, "", 0, 0}, {0, 0, "", 0, 0}, {0, 0, "", 0, 0}, {0, 0, "", 0, 0}, {0, 0, "", 0, 0}, {0, 0, "", 0, 0}, {0, 0, "", 0, 0}, {0, 0, "", 0, 0},};
+} InterruptInfo;
 
 int interrupts_count = 0;
+InterruptInfo interrupt_infos[10];
 char *socket_filename;
 int flag_verbose     = 0;
 int flag_dont_detach = 0;
@@ -65,6 +65,8 @@ int lcd_di           = DI;
 int lcd_led          = LED;
 int lcd_spics        = SPICS;
 int client_socket_fd = 0;
+
+
 
 void usage() {
   printf("Usage: gpiod [ -d ] [ -v ] [ -s socketfile ] [ -a diport ] [ -l ledport ] [ -c spics ] [ -i configfile ] [ -h ]\n");
@@ -626,31 +628,25 @@ int main(int argc, char **argv) {
         }
         for (r=0; r < interrupts_count; r++) {
           interrupt_setting = config_setting_get_elem(setting, r);
-          fail_read_interrupt = 0;
-          if (!config_setting_lookup_int(interrupt_setting, "pin", &inter_pin)) {
-            fail_read_interrupt = 1;
+          if (!(config_setting_lookup_int(interrupt_setting, "pin", &inter_pin)
+              && config_setting_lookup_string(interrupt_setting, "type", &inter_type_string)
+              && config_setting_lookup_string(interrupt_setting, "name", &inter_name)
+              && config_setting_lookup_int(interrupt_setting, "wait", &inter_wait))) {
+            continue;
           }
-          if (config_setting_lookup_string(interrupt_setting, "type", &inter_type_string)) {
-            if(strncmp(inter_type_string, "falling", strlen("falling")) == 0) {
-              inter_type = INT_EDGE_FALLING;
-            } else if (strncmp(inter_type_string, "rising", strlen("rising")) == 0) {
-              inter_type = INT_EDGE_RISING;
-            } else if (strncmp(inter_type_string, "both", strlen("both")) == 0) {
-              inter_type = INT_EDGE_BOTH;
-            } else {
-              fail_read_interrupt = 1;
-            }
+
+          if(strncmp(inter_type_string, "falling", strlen("falling")) == 0) {
+            inter_type = INT_EDGE_FALLING;
+          } else if (strncmp(inter_type_string, "rising", strlen("rising")) == 0) {
+            inter_type = INT_EDGE_RISING;
+          } else if (strncmp(inter_type_string, "both", strlen("both")) == 0) {
+            inter_type = INT_EDGE_BOTH;
           } else {
-            fail_read_interrupt = 1;
-          }
-          if (!config_setting_lookup_string(interrupt_setting, "name", &inter_name)) {
-            fail_read_interrupt = 1;
-          }
-          if (!config_setting_lookup_int(interrupt_setting, "wait", &inter_wait)) {
-            fail_read_interrupt = 1;
+            continue;
           }
           
           if (!fail_read_interrupt && r <= 10) {
+            interrupt_infos[r] = malloc(sizeof(InterruptInfo));
             interrupt_infos[r].pin = inter_pin;
             interrupt_infos[r].wait = inter_wait;
             interrupt_infos[r].type = inter_type;

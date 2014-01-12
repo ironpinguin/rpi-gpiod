@@ -47,10 +47,17 @@ install: install-bin
 install-bin:
 	@echo "[Install Binary]"
 	@install -m 0755 gpiod $(INSTALL_DIR)/
+	@install -m 0755 gpiod.conf $(INSTALL_DIR_CONFIG)/
+	@install -m 0755 gpiod.init $(INSTALL_DIR_INIT)/gpiod
+	@insserv gpiod
+	@mkdir -p /var/lib/gpiod
 
 uninstall:
 	@echo "[UnInstall]"
 	@rm -f $(INSTALL_DIR)/gpiod
+	@rm -f $(INSTALL_DIR_CONFIG)/gpiod.conf
+	@insserv -r gpiod
+	@rm -f $(INSTALL_DIR_INIT)/gpiod
 
 test test-mock-lib: gpiod $(MOCK_LIB)
 	@./test.sh --with-mock-lib
