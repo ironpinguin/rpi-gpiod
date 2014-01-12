@@ -18,10 +18,11 @@
 # PATH should only include /usr/* if it runs after the mountnfs.sh script
 PATH=/sbin:/usr/sbin:/bin:/usr/bin
 DESC="gpio deamon"
+CONFIG="/etc/gpiod.conf"
 SOCKET="/var/lib/gpiod/socket"
 NAME=gpiod
 DAEMON=/usr/local/bin/$NAME
-DAEMON_ARGS="-s $SOCKET"
+DAEMON_ARGS="-i $CONFIG"
 PIDFILE=/var/run/$NAME.pid
 SCRIPTNAME=/etc/init.d/$NAME
 
