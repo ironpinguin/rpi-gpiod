@@ -30,6 +30,7 @@
 #define CLIENT_LCD     "LCD"
 
 #define LCD_INFO       "INFO"
+#define LCD_FONT_INFO  "FONTINFO"
 #define LCD_CLEAR      "CLEAR"
 #define LCD_SHOW       "SHOW"
 #define LCD_LINE       "LINE"
@@ -308,6 +309,30 @@ void do_lcd_commands(int client_socket_fd, char *buf) {
     write_msg_to_client(client_socket_fd, "LCD CIRCLE x1 y1 r1 fill => write circle to screen buffer.");
     write_msg_to_client(client_socket_fd, "LCD ELLIPSE x1 y1 r1 r2 fill => write ellipse to screen buffer.");
     write_msg_to_client(client_socket_fd, "LCD TEXT fontId x1 y1 \"TEXT\" => write text to screen buffer.");
+  } else if (strncmp(command, LCD_FONT_INFO, strlen(LCD_FONT_INFO)) == 0) {
+    write_msg_to_client(client_socket_fd, "LCD FONT SIZE 4x6 ID 0");
+    write_msg_to_client(client_socket_fd, "LCD FONT SIZE 5x12 ID 2");
+    write_msg_to_client(client_socket_fd, "LCD FONT SIZE 5x8 ID 4");
+    write_msg_to_client(client_socket_fd, "LCD FONT SIZE 6x10 ID 6");
+    write_msg_to_client(client_socket_fd, "LCD FONT SIZE 6x8 ID 8");
+    write_msg_to_client(client_socket_fd, "LCD FONT SIZE 7x12 ID 10");
+    write_msg_to_client(client_socket_fd, "LCD FONT SIZE 7x12 ID 11");
+    write_msg_to_client(client_socket_fd, "LCD FONT SIZE 7x12 ID 12");
+    write_msg_to_client(client_socket_fd, "LCD FONT SIZE 7x12 ID 13");
+    write_msg_to_client(client_socket_fd, "LCD FONT SIZE 8x12 ID 14");
+    write_msg_to_client(client_socket_fd, "LCD FONT SIZE 8x12 ID 15");
+    write_msg_to_client(client_socket_fd, "LCD FONT SIZE 8x14 ID 16");
+    write_msg_to_client(client_socket_fd, "LCD FONT SIZE 8x14 ID 17");
+    write_msg_to_client(client_socket_fd, "LCD FONT SIZE 8x8 ID 18");
+    write_msg_to_client(client_socket_fd, "LCD FONT SIZE 8x8 ID 19");
+    write_msg_to_client(client_socket_fd, "LCD FONT SIZE 10x16 ID 20");
+    write_msg_to_client(client_socket_fd, "LCD FONT SIZE 10x16 ID 21");
+    write_msg_to_client(client_socket_fd, "LCD FONT SIZE 16x26 ID 26");
+    write_msg_to_client(client_socket_fd, "LCD FONT SIZE 16x26 ID 27");
+    write_msg_to_client(client_socket_fd, "LCD FONT SIZE 24x40 ID 30");
+    write_msg_to_client(client_socket_fd, "LCD FONT SIZE 24x40 ID 31");
+    write_msg_to_client(client_socket_fd, "LCD FONT SIZE 32x53 ID 32");
+    write_msg_to_client(client_socket_fd, "LCD FONT SIZE 32x53 ID 33");
   } else {
     write_error_msg_to_client(client_socket_fd, "unknown lcd command");
   }
