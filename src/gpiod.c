@@ -785,8 +785,8 @@ int main(int argc, char **argv) {
   if (read_config) {
     config_init(&cfg);
     /* Read the config file and about on error */
-    if (!config_read_file(&cfg, config_file_name)) {
-      printf("\n%s:%d - %s\n", config_error_file(&cfg), config_error_line(&cfg), config_error_text(&cfg));
+    if (!config_read_file(&cfg, config_file_name)) {        
+      printf("\n%s:%d - %s\n", config_file_name, config_error_line(&cfg), config_error_text(&cfg));
       config_destroy(&cfg);
       exit(1);
     }
