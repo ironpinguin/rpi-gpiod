@@ -1,7 +1,7 @@
-/*
+/**
  * gpiod - a GPIO daemon for Raspeberry Pi
  *
- */
+ */ 
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -20,15 +20,60 @@
 #include "wiringPi.h"
 #include "dog128.h"
 
+/** 
+ * \brief Pid file for deamon mode.
+ * 
+ *  The location of the pid file for deamon modus.
+ */
 #define PID_FILE "/var/run/gpiod.pid"
+
+/**
+ * \brief The Buffer size for socket input reading
+ * 
+ * The buffer size of chars to read from socket every time.
+ */
 #define BUFFER_SIZE 128
 
+/**
+ * \brief read client command.
+ * 
+ * Read the gpio pin.
+ */
 #define CLIENT_READ    "READ"
+
+/**
+ * \brief Readall client command.
+ * 
+ * Read all gpio pin mode and status
+ */
 #define CLIENT_READALL "READALL"
+
+/**
+ * \brief write client command.
+ * 
+ * Write to gpio pin.
+ */
 #define CLIENT_WRITE   "WRITE"
+
+/**
+ * \brief mode client command.
+ * 
+ * Set gpio pin mode.
+ */
 #define CLIENT_MODE    "MODE"
+
+/**
+ * \brief lcd client command.
+ * 
+ * Prefix for all lcd commands.
+ */
 #define CLIENT_LCD     "LCD"
 
+/**
+ * \brief lcd inof client commad.
+ * 
+ * Give list off all lcd commands
+ */
 #define LCD_INFO       "INFO"
 #define LCD_FONT_INFO  "FONTINFO"
 #define LCD_CLEAR      "CLEAR"
@@ -59,17 +104,20 @@ typedef struct InterruptInfo {
 
 int interrupts_count = 0;
 InterruptInfo interrupt_infos[10];
-char *socket_filename;
-int flag_verbose     = 0;
-int flag_dont_detach = 0;
-int lcd_is_init      = 0;
-int lcd_di           = DI;
-int lcd_led          = LED;
-int lcd_spics        = SPICS;
+char *socket_filename;    /**< Socket file name */
+int flag_verbose     = 0; /**< variable to set verbose output */
+int flag_dont_detach = 0; /**< variable to not run as deamon */
+int lcd_is_init      = 0; /**< variable if lcd display is initialized */
+int lcd_di           = DI; /**< variable with gpio pi of di lcd signal */
+int lcd_led          = LED; /**< variable with gpio pwm pin for lcd backlight */
+int lcd_spics        = SPICS; /**< variable with spi cs */
 int client_socket_fd = 0;
 
-
-
+/**
+ * \brief Usage of the program.
+ * 
+ * Print the usage to stdout.
+ */
 void usage() {
   printf("Usage: gpiod [ -d ] [ -v ] [ -s socketfile ] [ -a diport ] [ -l ledport ] [ -c spics ] [ -i configfile ] [ -h ]\n");
   printf("    -d            don't daemonize\n");
@@ -82,6 +130,16 @@ void usage() {
   printf("    -h            show help (this meassge)\n");
 }
 
+/**
+ * \brief strrpos implementation.
+ * 
+ * Self impelemtation of strrpos
+ * 
+ * @param string The string to search into.
+ * @param niddle The char where will be searched.
+ * 
+ * @return char position or -1
+ */
 int strrpos(char *string, char niddle) {
     char *pos_info;
     
@@ -93,6 +151,9 @@ int strrpos(char *string, char niddle) {
     }
 }
 
+/**
+ * Delete the pid file for cleanup.
+ */
 void delete_pid_file() {
   if (unlink(PID_FILE) == -1) {
     perror(PID_FILE);
@@ -100,6 +161,9 @@ void delete_pid_file() {
   }
 }
 
+/**
+ * Delete the socket file for cleanup.
+ */
 void delete_socket_file() {
   if (unlink(socket_filename) == -1) {
     perror(socket_filename);
@@ -107,6 +171,9 @@ void delete_socket_file() {
   }
 }
 
+/**
+ * Cleanup on exit.
+ */
 void cleanup_and_exit() {
   if (!flag_dont_detach) {
     delete_pid_file();
@@ -115,6 +182,9 @@ void cleanup_and_exit() {
   exit(EXIT_SUCCESS);
 }
 
+/**
+ * Write pid file if started as deamon.
+ */
 void write_pid_file() {
   FILE *pid_file;
   if ((pid_file = fopen(PID_FILE, "w+")) == NULL) {
@@ -125,6 +195,12 @@ void write_pid_file() {
   fclose(pid_file);
 }
 
+/**
+ * Write error message to socket client.
+ * 
+ * @param fd  Socket file descriptor.
+ * @param msg Message to write.
+ */
 void write_error_msg_to_client(int fd, char *msg) {
   char buf[BUFFER_SIZE];
   size_t len;
@@ -133,6 +209,12 @@ void write_error_msg_to_client(int fd, char *msg) {
   write(fd, buf, len);
 }
 
+/**
+ * Write a integer value to socket.
+ * 
+ * @param fd    File descriptor of the socket.
+ * @param value Integer value.
+ */
 void write_int_value_to_client(int fd, int value) {
   char buf[BUFFER_SIZE];
   size_t len;
@@ -141,6 +223,12 @@ void write_int_value_to_client(int fd, int value) {
   write(fd, buf, len);
 }
 
+/**
+ * Write a message to socket.
+ * 
+ * @param fd  File descriptor of the socket.
+ * @param msg Message to write.
+ */
 void write_msg_to_client(int fd, char *msg) {
   char buf[BUFFER_SIZE];
   size_t len;
@@ -149,6 +237,11 @@ void write_msg_to_client(int fd, char *msg) {
   write(fd, buf, len);
 }
 
+/**
+ * Write all pin data to socket.
+ * 
+ * @param fd File descriptor of the socket.
+ */
 void write_all_data_to_client(int fd) {
   int pin;
   char msg[BUFFER_SIZE];
@@ -167,6 +260,9 @@ void write_all_data_to_client(int fd) {
   }
 }
 
+/**
+ * Init the lcd display only once.
+ */
 void init_lcd() {
   if (!lcd_is_init) {
     init(lcd_di, lcd_led, lcd_spics);
@@ -175,18 +271,47 @@ void init_lcd() {
   }
 }
 
+/**
+ * check if pin nummber is valid.
+ * 
+ * @param pin_num The pin number to check.
+ * 
+ * @return 0 or 1
+ */
 int is_valid_pin_num(int pin_num) {
   return (pin_num >= 0) && (pin_num < 16);
 }
 
+/**
+ * Check if pin value is valid.
+ * 
+ * @param value The value to set the pin.
+ * 
+ * @return 0 or 1
+ */
 int is_valid_pin_value(int value) {
   return (value == 0) || (value == 1);
 }
 
+/**
+ * Check if PIN Mode is valid actual only "IN" and "OUT" are allowed.
+ * 
+ * @param mode_str The mode string to check
+ * 
+ * @return 0 or 1 
+ */
 int is_valid_pin_mode(char *mode_str) {
   return ((strncmp(mode_str, "IN", 2) == 0) || (strncmp(mode_str, "OUT", 3) == 0));
 }
 
+/**
+ * \brief work on lcd commands.
+ * 
+ * Identify and execute the given LCD command.
+ * 
+ * @param client_socket_fd The unix socket file descriptor.
+ * @param buf              The input puffer with the command.
+ */
 void do_lcd_commands(int client_socket_fd, char *buf) {
   char command[BUFFER_SIZE], *text;
   int x1, x2, y1, y2, r1, r2, fill, fontId;
@@ -338,6 +463,14 @@ void do_lcd_commands(int client_socket_fd, char *buf) {
   }
 }
 
+/**
+ * \brief Read from pin
+ * 
+ * Get Pinnumber, read status of pin and write it to the socket.
+ * 
+ * @param client_socket_fd The socket file descriptor.
+ * @param buf              Input Command.
+ */
 void do_read_from_pin(int client_socket_fd, char *buf) {
   int pin_num;
   int n = sscanf(buf, "%d", &pin_num);
@@ -359,6 +492,14 @@ void do_read_from_pin(int client_socket_fd, char *buf) {
   }
 }
 
+/**
+ * \brief Write to pin.
+ * 
+ * Get Pinnumber and value. Write the value to the gpio pin.
+ * 
+ * @param client_socket_fd The socket file descriptor.
+ * @param buf              The command.
+ */
 void do_write_to_pin(int client_socket_fd, char *buf) {
   int pin_num, value;
   int n = sscanf(buf, "%d %d", &pin_num, &value);
@@ -377,6 +518,14 @@ void do_write_to_pin(int client_socket_fd, char *buf) {
   }
 }
 
+/**
+ * \brief Set the pin mode.
+ * 
+ * Get pinnumber and mode. The set the given mode for the pin.
+ * 
+ * @param client_socket_fd The socket file descriptor.
+ * @param buf              The command.
+ */
 void do_set_pin_mode(int client_socket_fd, char *buf) {
   char mode_str[BUFFER_SIZE];
   int pin_num;
@@ -450,6 +599,12 @@ void interrupt9(void) {
   interrupt(9);
 }
 
+/**
+ * Read command and select the right subroutine.
+ * 
+ * @param command          Command puffer from input.
+ * @param client_socket_fd The socket file descriptor.
+ */
 void read_command(char *command, int client_socket_fd) {
     if (strncmp(command, CLIENT_READALL, 7) == 0) {
       write_all_data_to_client(client_socket_fd);
@@ -466,6 +621,12 @@ void read_command(char *command, int client_socket_fd) {
     }
 }
 
+/**
+ * Read client input function for endless loop.
+ * 
+ * @param socketfd Read client input.
+ * @return Allways 1
+ */
 int read_client(int socketfd) {
   struct sockaddr_un address;
   socklen_t address_len = sizeof(address);
@@ -549,6 +710,13 @@ int read_client(int socketfd) {
   return 1;
 }
 
+/**
+ * Main function to analyse command line parameters.
+ * 
+ * @param argc
+ * @param argv
+ * @return 
+ */
 int main(int argc, char **argv) {
   config_t cfg;
   config_setting_t *setting, *interrupt_setting;
