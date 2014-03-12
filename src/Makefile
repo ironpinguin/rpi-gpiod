@@ -16,7 +16,7 @@ MOCK_LIB  = libwiringPi_mock.$(SHLIB_EXT)
 LD_FLAGS  = $(LIB_DIR) $(LIBS)
 CFLAGS    = -Wall -g $(INC_DIR) -fPIC
 
-SRC       = gpiod.c
+SRC       = gpiod.c lcd.c config_load.c interrupt.c
 OBJ       = $(SRC:.c=.o)
 
 
@@ -33,10 +33,10 @@ $(MOCK_LIB): $(MOCK_OBJ)
 	$(CC) -shared -o $@ $(MOCK_OBJ)
 
 gpiod_mock: mock_lib $(OBJ) 
-	$(CC) -o $@  gpiod.o  ../lib/rpi-dog128/src/libwiringPi_mock.a -L. -lpthread -lconfig
+	$(CC) -o $@  $(OBJ) ../lib/rpi-dog128/src/libwiringPi_mock.a -L. -lpthread -lconfig
 
 gpiod_glmock: glmock_lib $(OBJ)
-	$(CC) -o $@  gpiod.o  -lwiringPi_glmock $(CFLAGS) $(LIB_DIR) -lpthread -ldog128 -lconfig
+	$(CC) -o $@  $(OBJ) -lwiringPi_glmock $(CFLAGS) $(LIB_DIR) -lpthread -ldog128 -lconfig
 
 .c.o:
 	$(CC) $(CFLAGS) $(EXTRA_CFLAGS) -c $<

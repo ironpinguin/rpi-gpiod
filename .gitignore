@@ -1,5 +1,4 @@
-src/gpiod.o
-src/wiringpimock.o
+src/*.o
 src/gpiod_mock
 src/gpiod_glmock
 src/command.log
@@ -7,4 +6,5 @@ src/display.log
 src/libwiringPi_mock.so
 .cproject
 .project
+.settings
 nbproject
