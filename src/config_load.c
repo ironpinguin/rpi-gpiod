@@ -8,7 +8,7 @@
 #include "stdlib.h"
 #include "gpiod.h"
 #include <libconfig.h>
-#include "wiringpi.h"
+#include "wiringPi.h"
 #include "config_load.h"
 #include "interrupt.h"
 
