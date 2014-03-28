@@ -21,7 +21,7 @@ OBJ       = $(SRC:.c=.o)
 
 
 gpiod: $(OBJ)
-	$(CC) -o $@ gpiod.o $(LD_FLAGS) 
+	$(CC) -o $@ $(OBJ) $(LD_FLAGS) 
 
 mock_lib: ../lib/rpi-dog128/src/libwiringPi_mock.a
 	$(MAKE) --directory ../lib/rpi-dog128 mock
